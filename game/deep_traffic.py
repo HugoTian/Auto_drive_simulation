@@ -53,7 +53,7 @@ class GameState:
         
         # screen
         self.circle = False # player goes so fast, need to update entire screen
-        
+
         # white car
         self.max_white_car = 5
         self.white_cars = {} # key is idx, and value is white car object
@@ -89,7 +89,7 @@ class GameState:
 
         
 
-        speed = random.randint(1,3)
+        speed = random.randint(1,5)
         self.car_maps[lane].append((i,y,speed))
         car = WhiteCar(i, y, lane, self.car_maps, speed=speed)
         self.white_cars[i] = car
@@ -152,7 +152,7 @@ class GameState:
 
         # slow down
         if actions[4] == 1:
-            self.playerAccY = -1
+            self.playerAccY = -2
 
         # summary
 
@@ -193,7 +193,7 @@ class GameState:
                     break
 
             # generate new cars 
-            if random.randint(0,1) == 1 or len(self.white_cars)==0:
+            if random.randint(0,1) == 1 or len(self.white_cars) < 3:
                 _ , lane = self.add_one_car(idx, begin=True)
 
 
@@ -236,10 +236,8 @@ class GameState:
         self.update_white_car()
 
         # check if crash here
-        #isCrash= checkCrash({'x': self.playerx, 'y': self.playery, 'index': self.playerIndex}, self.upperPipes, self.lowerPipes)
         reward, terminal = self.check_crash()
        
-
         # get entire new screen
         if self.circle:
             self.playery = SCREENHEIGHT - RED_CAR_HEIGHT

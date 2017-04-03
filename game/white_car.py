@@ -27,6 +27,10 @@ class WhiteCar:
     def update_car_map(self, car_map_elem):
         self.others = car_map_elem
 
+    def direct_update(self, y):
+        # directly set y value
+        self.y += y
+
     def update(self):
         # smart update of white car
         removed = False
