@@ -23,4 +23,5 @@ def test_simulator(t_max):
 		t = t + 1
 
 if __name__ == "__main__":
-	test_simulator(1000)
+	
+    test_simulator(1000)

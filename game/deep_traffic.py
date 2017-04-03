@@ -65,24 +65,29 @@ class GameState:
 
     def add_one_car(self, i, begin=False):
         # i : id of the car
-        # begin : whether the car should appear at border
+        
         y, lane = random.randint(0, SCREENHEIGHT), random.randint(0,3)
         
+        # begin : whether the car should appear at border
+        if begin:
+            if lane in (0,1):
+                y = 0
+            else:
+                y = SCREENHEIGHT
+
         # avoid collision with other initialization
         initial_collision = True
         while initial_collision :
             if self.car_maps[lane]:
                 initial_collision = any( check_collision(lane, y, lane, y_axis) for _, y_axis, _ in self.car_maps[lane])
                 if initial_collision:
+                    if begin: # if its begin statem them just abort
+                        return None, None
                     y =  random.randint(0, SCREENHEIGHT)
             else:
                 initial_collision = False
 
-        if begin:
-            if lane in (0,1):
-                y = 0
-            else:
-                y = SCREENHEIGHT
+        
 
         speed = random.randint(1,3)
         self.car_maps[lane].append((i,y,speed))
@@ -118,7 +123,7 @@ class GameState:
                 terminal = True
             elif self.lane == 2:
                 reward = -1
-                termianl = True
+                terminal = True
             else:
                 self.lane  = 2
                 self.playerx = LANE[self.lane] 
@@ -232,7 +237,7 @@ class GameState:
 
         # check if crash here
         #isCrash= checkCrash({'x': self.playerx, 'y': self.playery, 'index': self.playerIndex}, self.upperPipes, self.lowerPipes)
-        reward, termianl = self.check_crash()
+        reward, terminal = self.check_crash()
        
 
         # get entire new screen
@@ -253,7 +258,13 @@ class GameState:
 
         for elem in self.white_cars:
             self.white_cars[elem].update_car_map(self.car_maps)
-        # print self.car_maps
+        
+        # handle termianl case
+        if terminal:
+            # make sure reward is -1
+            reward = -1
+            self.__init__()
+
         # draw 
         SCREEN.blit(IMAGES['background'], (0,0))
 
