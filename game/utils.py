@@ -6,24 +6,6 @@ FPS = 30
 SCREENWIDTH  = 600
 SCREENHEIGHT = 800
 
-pygame.init()
-FPSCLOCK = pygame.time.Clock()
-SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
-pygame.display.set_caption('Deep Traffic')
-
-IMAGES = utils.load()
-
-BACKGROUND_WIDTH = IMAGES['background'].get_width()
-
-RED_CAR_WIDTH = IMAGES['red_car'].get_width()
-RED_CAR_HEIGHT = IMAGES['red_car'].get_height()
-
-WHITE_CAR_WIDTH = IMAGES['white_car'].get_width()
-WHITE_CAR_HEIGHT = IMAGES['white_car'].get_height()
-
-ROAD_WIDTH = IMAGES['road'].get_width()
-ROAD_HEIGHT = IMAGES['road'].get_height()
-
 LANE = {}
 LANE[0] = 150
 LANE[1] = 240
@@ -31,6 +13,7 @@ LANE[2] = 330
 LANE[3] = 400
 
 BASE_SHIFT = 100
+
 
 def load():
 
@@ -61,3 +44,7 @@ def load():
         pygame.image.load('Images/9.png').convert_alpha())
 
     return IMAGES
+
+
+
+

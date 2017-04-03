@@ -7,6 +7,7 @@ import pygame.surfarray as surfarray
 from pygame.locals import *
 from itertools import cycle
 
+
 class WhiteCar:
 
     def __init__(self, key, y, lane,all_white_car, speed=1):
@@ -106,7 +107,9 @@ class WhiteCar:
         return removed, self.key
 
     def check_crash_white_car(self, lane):
+
         # check whether crash with white cars on lane
+        from deep_traffic import check_collision
         crash = False
         crashed_car = None
         car_list = self.others[lane]

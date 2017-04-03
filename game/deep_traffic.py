@@ -7,7 +7,25 @@ import pygame.surfarray as surfarray
 from utils import *
 from pygame.locals import *
 from itertools import cycle
-from white_car import *
+from white_car import WhiteCar
+
+pygame.init()
+FPSCLOCK = pygame.time.Clock()
+SCREEN = pygame.display.set_mode((SCREENWIDTH, SCREENHEIGHT))
+pygame.display.set_caption('Deep Traffic')
+
+IMAGES = load()
+
+BACKGROUND_WIDTH = IMAGES['background'].get_width()
+
+RED_CAR_WIDTH = IMAGES['red_car'].get_width()
+RED_CAR_HEIGHT = IMAGES['red_car'].get_height()
+
+WHITE_CAR_WIDTH = IMAGES['white_car'].get_width()
+WHITE_CAR_HEIGHT = IMAGES['white_car'].get_height()
+
+ROAD_WIDTH = IMAGES['road'].get_width()
+ROAD_HEIGHT = IMAGES['road'].get_height()
 
 class GameState:
     # reward policy
