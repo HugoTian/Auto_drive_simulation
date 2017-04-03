@@ -291,7 +291,7 @@ class GameState:
         pygame.display.update()
         FPSCLOCK.tick(FPS)
         #print self.upperPipes[0]['y'] + PIPE_HEIGHT - int(BASEY * 0.2)
-        return image_data, reward, terminal
+        return image_data, reward, terminal, (self.playerx, self.playery)
 
 
 
