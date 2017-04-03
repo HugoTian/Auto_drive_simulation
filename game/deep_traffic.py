@@ -59,7 +59,7 @@ class GameState:
         self.white_cars = {} # key is idx, and value is white car object
 
         # initialize white car
-        self.car_maps = {0:[], 1:[], 2:[],3:[]} # key is lane, and value is (key,y, speed) pair
+        self.car_maps = {0:[], 1:[], 2:[],3:[]} # key is lane, and value is list of (key,y, speed) tuples
         self.car_maps[self.lane].append((self.max_white_car, self.playery, self.playerVelY))
         self.init_white_car()
 
@@ -314,7 +314,8 @@ def check_collision(x1,y1,x2,y2):
     if x1 != x2:
         return False
 
-    if abs(y1-y2) <= 20 + RED_CAR_HEIGHT:
+    if abs((y1 % SCREENHEIGHT) - (y2 % SCREENHEIGHT)
+          ) <= 20 + RED_CAR_HEIGHT:
         return True
     else:
         return False
