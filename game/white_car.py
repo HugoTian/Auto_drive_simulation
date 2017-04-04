@@ -66,6 +66,7 @@ class WhiteCar:
                 if not change_lane_fail:
                     self.lane = new_lane
                     self.x = LANE[self.lane]
+                    self.y += 5
                 else:
                     for idx, y, s in self.others[self.lane]:
                         if crashed_car == idx:
@@ -102,6 +103,7 @@ class WhiteCar:
                 if not change_lane_fail:
                     self.lane = new_lane
                     self.x = LANE[self.lane]
+                    self.y -= 5
                 else:
                     # change lane fail , slow down
                     for idx, y, s in self.others[self.lane]:
@@ -117,7 +119,7 @@ class WhiteCar:
         crash = False
         crashed_car = None
         car_list = self.others[lane]
-        if len(car_list) > 1:
+        if len(car_list) >= 1:
             for idx, y, _ in car_list:
                 if idx != self.key:
                     crash = check_collision(lane, self.y, lane,y)

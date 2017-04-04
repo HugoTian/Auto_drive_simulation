@@ -55,7 +55,7 @@ class GameState:
         self.circle = False # player goes so fast, need to update entire screen
 
         # white car
-        self.max_white_car = 5
+        self.max_white_car = 7
         self.white_cars = {} # key is idx, and value is white car object
 
         # initialize white car
@@ -290,9 +290,8 @@ class GameState:
         image_data = pygame.surfarray.array3d(pygame.display.get_surface())
         pygame.display.update()
         FPSCLOCK.tick(FPS)
-        #print self.upperPipes[0]['y'] + PIPE_HEIGHT - int(BASEY * 0.2)
+        
         return image_data, reward, terminal, (self.playerx, self.playery)
-
 
 
 def showScore(score):
