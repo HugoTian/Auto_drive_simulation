@@ -114,7 +114,7 @@ class GameState:
         terminal = False
 
         # turn left
-        if actions[1] == 1:
+        if actions == 1:
             if self.lane == 0:
                 self.lane = 1 
                 self.playerx = LANE[self.lane] 
@@ -129,7 +129,7 @@ class GameState:
                 self.playerx = LANE[self.lane] 
 
         # turn right
-        if actions[2] == 1:
+        if actions == 2:
             if self.lane == 0:
                 reward = -1
                 terminal = True
@@ -146,12 +146,12 @@ class GameState:
                 terminal = True
         
         # speed up
-        if actions[3] == 1:
+        if actions == 3:
             self.playerAccY = 1
             reward = 1
 
         # slow down
-        if actions[4] == 1:
+        if actions == 4:
             self.playerAccY = -2
 
         # summary
@@ -226,8 +226,8 @@ class GameState:
 
         
 
-        if sum(input_actions) != 1:
-            raise ValueError('Multiple input actions!')
+        if input_actions < 0 or input_actions > 5 :
+            raise ValueError('Not a valid operatio')
 
         # update player
         reward, terminal = self.update_player(input_actions)

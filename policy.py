@@ -32,6 +32,7 @@ EPS_END = 0.05
 EPS_DECAY = 200
 USE_CUDA = torch.cuda.is_available()
 
+
 # named tuple to record state transitions
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward', 'terminate'))
@@ -81,7 +82,7 @@ class net(nn.Module):
         self.bn2 = nn.BatchNorm2d(32)
         self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
         self.bn3 = nn.BatchNorm2d(32)
-        self.head = nn.Linear(448, ACTIONS)
+        self.head = nn.Linear(1568, ACTIONS)
 
 
     def forward(self, x):
@@ -90,33 +91,3 @@ class net(nn.Module):
         x = F.relu(self.bn3(self.conv3(x)))
         return self.head(x.view(x.size(0), -1))
 
-def get_roi(x,y):
-    # get the region of interests
-    screen = pygame.surfarray.array3d(pygame.display.get_surface())
-    
-    # hard code
-    # need change when cars can go down
-    y_min = max(0 , y - 100)
-    y_max = min(SCREENHEIGHT, y + 100)
-    screen = screen[300:500, y_min:y_max]
-    screen = screen.transpose((2, 0, 1))  # transpose into torch order (CHW)
-
-    screen = np.ascontiguousarray(screen, dtype=np.float32) / 255
-    screen = torch.from_numpy(screen)
-    # Resize, and add a batch dimension (BCHW)
-    return resize(screen).unsqueeze(0)
-
-def select_action(state):
-    # given state, selection action,
-    global steps_done
-    sample = random.random()
-    eps_threshold = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * steps_done / EPS_DECAY)
-    steps_done += 1
-
-    if sample > eps_threshold:
-        # some times use the model to select actions
-        # action with max score
-        return model(Variable(state, volatile=True)).data.max(1)[1].cpu()
-    else:
-        # some time just random action
-        return torch.LongTensor([[random.randrange(ACTIONS)]])
