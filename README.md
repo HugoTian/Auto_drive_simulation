@@ -1,10 +1,10 @@
 # Deep traffic, simulator for reinforcement learning assignment
 
-To get required python packages
+To get required python packages on MacOS
 
     pip install -r requirements.txt
 
-pytorch is my model to train the network, please refer to [here](http://pytorch.org/) to install
+If you use other platform or the above command fails, basically you need to install pygame, pytorch, torchvision, opencv to train the network, please refer to [here](http://pytorch.org/) to install pytorch and torchvision.
 
 
 To run the simulation
@@ -46,7 +46,8 @@ To Do
    2. Add people
    3. Add park
    4. Design reward system to make better player
-   5. make simulator stable
+   5. Make simulator stable
+   6. Reduce library dependency
    
    
 
