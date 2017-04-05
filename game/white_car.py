@@ -10,7 +10,7 @@ from itertools import cycle
 
 class WhiteCar:
 
-    def __init__(self, key, y, lane,all_white_car, speed=1):
+    def __init__(self, key, y, lane, env , speed=1):
         
         self.key = key # the key in game state white_cars dictionary
         self.y = y
@@ -21,11 +21,11 @@ class WhiteCar:
 
         self.lane = lane
         self.x = LANE[lane]
-        self.others = all_white_car
         self.speed = speed
+        self.env = env
 
-    def update_car_map(self, car_map_elem):
-        self.others = car_map_elem
+    def update_env(self, env):
+        self.env = env
 
     def direct_update(self, y):
         # directly set y value
@@ -36,6 +36,7 @@ class WhiteCar:
         removed = False
 
         if not self.up:
+            # going down
             self.y = self.y + self.speed
 
             # check out of bound
@@ -43,34 +44,10 @@ class WhiteCar:
                 removed = True
                 return removed, self.key
             # check same lane collision
-            crash, crashed_car = self.check_crash_white_car(self.lane)
-
-            # only car at back need to do something
-            back = False
-            if crash:
-                for idx, y, s in self.others[self.lane]:
-                        if crashed_car == idx:
-                            crashed_y = y 
-                back = self.y < crashed_y
+            crash, crashed_car , back = self.check_crash_white_car(self.lane)
 
             if crash and back:
-                # if crash change lane or slow down 
-                change_lane_fail = False
-                if self.lane == 0:
-                    change_lane_fail, _ = self.check_crash_white_car(1)
-                    new_lane = 1
-                else:
-                    change_lane_fail , _ = self.check_crash_white_car(0)
-                    new_lane = 0
-
-                if not change_lane_fail:
-                    self.lane = new_lane
-                    self.x = LANE[self.lane]
-                    self.y += 5
-                else:
-                    for idx, y, s in self.others[self.lane]:
-                        if crashed_car == idx:
-                            self.speed = s 
+                self.handle_crash(crashed_car)
         else:
 
             self.y = self.y - self.speed
@@ -81,52 +58,63 @@ class WhiteCar:
                 return removed, self.key
 
             # same lane crash
-            crash , crashed_car= self.check_crash_white_car(self.lane)
-
-            back = False
-            if crash:
-                for idx, y, s in self.others[self.lane]:
-                        if crashed_car == idx:
-                            crashed_y = y 
-                back = self.y > crashed_y
+            crash , crashed_car, back = self.check_crash_white_car(self.lane)
 
             if crash and back:
                 # if crash change lane or slow down 
-                change_lane_fail = False
-                if self.lane == 2:
-                    change_lane_fail, _ = self.check_crash_white_car(3)
-                    new_lane = 3
-                else:
-                    change_lane_fail , _ = self.check_crash_white_car(2)
-                    new_lane = 2
-
-                if not change_lane_fail:
-                    self.lane = new_lane
-                    self.x = LANE[self.lane]
-                    self.y -= 5
-                else:
-                    # change lane fail , slow down
-                    for idx, y, s in self.others[self.lane]:
-                        if crashed_car == idx:
-                            self.speed = s
+                self.handle_crash(crashed_car)
 
         return removed, self.key
 
+    def handle_crash(self, crashed_car):
+        # if there is a possible crash, need to handle that
+        change_lane_map = {0:1, 1:0, 2:3, 3:2} # possible ways to change lane
+
+        new_lane = change_lane_map[self.lane]
+        crash, _, _ = self.check_crash_white_car(new_lane)
+
+        if not crash:
+            self.lane = new_lane
+            self.x = LANE[self.lane]
+        else:
+            self.speed = crashed_car.speed
+
+
+    def get_cars_in_lane(self, lane):
+        # get all the cars in lane except for myself
+        car_list = []
+        for elem in self.env.get_cars(lane):
+            if elem.idx != self.key:
+                car_list.append(elem) 
+
+        return car_list
+
     def check_crash_white_car(self, lane):
 
-        # check whether crash with white cars on lane
+        # check whether crash with  cars on lane
+        # return crash, crashed_car_id, whether I am at back(slow down or change_lane)
         from deep_traffic import check_collision
         crash = False
         crashed_car = None
-        car_list = self.others[lane]
-        if len(car_list) >= 1:
-            for idx, y, _ in car_list:
-                if idx != self.key:
-                    crash = check_collision(lane, self.y, lane,y)
-                    if crash:
-                        crashed_car = idx
-                        return crash, idx
-        return crash, crashed_car
+        back = None
+
+        car_list = self.get_cars_in_lane(lane)
+        for car in car_list:
+            
+            crash = check_collision(lane, self.y, lane, car.y)
+            if crash:
+                crashed_car = car
+
+                if self.up:
+                    back = self.y > car.y
+                else:
+                    back = self.y < car.y
+
+                return crash, crashed_car, back
+        
+        return crash, crashed_car, back
+
+
     def getXY(self):
         return (self.x, self.y)
 

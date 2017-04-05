@@ -6,7 +6,6 @@ import math
 sys.path.append("game/")
 import deep_traffic as game
 import random
-import numpy as np
 import cv2
 from itertools import count
 from copy import deepcopy
@@ -28,7 +27,7 @@ GAME = 'Deep Traffic' # the name of the game being played for log files
 ACTIONS = 5 # number of valid actions
 
 #  For training the model
-BATCH_SIZE = 128
+BATCH_SIZE = 32
 GAMMA = 0.999
 # region of interest, crop screen to find ROI
 ROI_WIDTH = 200
@@ -245,14 +244,16 @@ def train_model(path='model'):
     	torch.save(model.state_dict(), f)
 
 def test_simulator(t_max):
-	s = game.GameState()
-	do_nothing = np.zeros(ACTIONS)
-	do_nothing = 0
-	
-	t = 0
-	while t < t_max:
-		image_data , reward , terminate , (x, y) = s.frame_step(do_nothing)
-		t = t + 1
+    s = game.GameState()
+    t = 0
+    while t < t_max:
+
+        action = random.randint(0,3)
+        if random.randint(0, 20) == 0:
+            action = 4
+        image_data , reward , terminate , (x, y) = s.frame_step(action)
+        
+        t = t + 1
 
  
 def load_model(path):

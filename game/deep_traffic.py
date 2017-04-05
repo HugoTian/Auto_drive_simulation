@@ -27,14 +27,55 @@ WHITE_CAR_HEIGHT = IMAGES['white_car'].get_height()
 ROAD_WIDTH = IMAGES['road'].get_width()
 ROAD_HEIGHT = IMAGES['road'].get_height()
 
+# Reward = namedtuple('Reward', ('reward, terminal, lane, x , acc_delta, up'))
+reward_scheme = {
+     True: { # up
+           2 : { # lane 2
+                  0: Reward(0.5, False, 2, LANE[2], 0, True), # do nothing
+                  1: Reward(-1, True, 2, LANE[2], 0, True), # left
+                  2: Reward(0.5, False, 3, LANE[3], 0, True), # right
+                  3: Reward(0.5, False, 2, LANE[2], 1, True), # speed up
+                  4: Reward(0.5, False, 2, LANE[2], -3, True) # slow down
+                }, 
+           3 : { # lane 3
+                  0: Reward(0.5, False, 3, LANE[3], 0, True),  # do nothing
+                  1: Reward(0.5, False, 2, LANE[2], 0, True), # left
+                  2: Reward(-1, True, 3, LANE[3], 0, True), # right
+                  3: Reward(0.5, False, 3, LANE[3], 1, True), # speed up
+                  4: Reward(0.5, False, 3, LANE[3], -3, True) # slow down
+                }
+           }
+    ,False:{
+            0: { # lane 0
+                  0: Reward(0.5, False, 0 , LANE[0], 0, False), # do nothing
+                  1: Reward(0.5, False, 1, LANE[1], 0, False), # left
+                  2: Reward(-1, True, 0, LANE[0], 0, False), # right
+                  3: Reward(0.5, False, 0, LANE[0], 1, False), # speed up
+                  4: Reward(0.5, False, 0, LANE[0], -3, False) # slow down
+                }, 
+            1:  {# lane 1
+                  0: Reward(0.5, False, 1, LANE[1], 0, False), # do nothing
+                  1: Reward(-1, True, 1, LANE[1], 0, False), # left
+                  2: Reward(0.5, False, 0, LANE[0], 0, False), # right
+                  3: Reward(0.5, False, 1, LANE[1], 1, False), # speed up
+                  4: Reward(0.5, False, 1, LANE[1], -3, False) # slow down
+                }
+            }
+}
 class GameState:
     # reward policy
 
     # keeps alive reward = 0.5
     # die , reward = -1
     # accelarate , reward = 1
+    # speed = 0, reward = -0.5
 
     def __init__(self):
+
+        # some important parameter
+        # car_maps : lane_info for environment
+        # white_cars : {id : WhiteCar()}
+        # env : The global environment, every object in simulator have the same env (See Environment Class in utils)
 
         self.score = 0  
         
@@ -48,6 +89,8 @@ class GameState:
         self.playerVelY = 1    
         self.playerAccY = 0  
         self.playerMaxV = 10
+        self.up = True
+
         # road 
         self.basex = BASE_SHIFT 
         
@@ -58,16 +101,24 @@ class GameState:
         self.max_white_car = 7
         self.white_cars = {} # key is idx, and value is white car object
 
-        # initialize white car
+        # initialize white car and environment
         self.car_maps = {0:[], 1:[], 2:[],3:[]} # key is lane, and value is (key,y, speed) pair
-        self.car_maps[self.lane].append((self.max_white_car, self.playery, self.playerVelY))
+        self.car_maps[self.lane].append(Car(self.max_white_car, self.playerVelY, self.lane, self.playery, self.up))
+
+        self.env = Environment(self.car_maps, None, None, None)
         self.init_white_car()
 
     def add_one_car(self, i, begin=False):
+        # add one car to the environment
         # i : id of the car
         
         y, lane = random.randint(0, SCREENHEIGHT), random.randint(0,3)
         
+        if lane in (0, 1):
+            up = False
+        else:
+            up = True
+
         # begin : whether the car should appear at border
         if begin:
             if lane in (0,1):
@@ -79,10 +130,10 @@ class GameState:
         initial_collision = True
         while initial_collision :
             if self.car_maps[lane]:
-                initial_collision = any( check_collision(lane, y, lane, y_axis) for _, y_axis, _ in self.car_maps[lane])
+                initial_collision = any( check_collision(lane, y, lane, car.y) for car in self.car_maps[lane])
                 if initial_collision:
-                    if begin: # if its begin statem them just abort
-                        return None, None
+                    if begin: # if its begin state then just abort
+                        return None 
                     y =  random.randint(0, SCREENHEIGHT)
             else:
                 initial_collision = False
@@ -90,70 +141,49 @@ class GameState:
         
 
         speed = random.randint(1,5)
-        self.car_maps[lane].append((i,y,speed))
-        car = WhiteCar(i, y, lane, self.car_maps, speed=speed)
+        new_car = Car(i,speed, lane , y,  up)
+
+        # update the car_maps
+        self.car_maps[lane].append(new_car)
+       
+        # create the WhiteCar object and store it in dict
+        car = WhiteCar(i, y, lane, self.env, speed=speed)
         self.white_cars[i] = car
-        return y, lane
+        return new_car
 
     def init_white_car(self):
+
         # initialize white car
         self.white_cars = {}
         for i in range(self.max_white_car):
-            y,lane = self.add_one_car(i)
-                 
+            _ = self.add_one_car(i)
+           
+        # update the environment
+        self.env.set_lane_info(self.car_maps)
+
+        # update env in white car
+        for i in range(self.max_white_car):
+            self.white_cars[i].update_env(self.env)
 
     def update_player(self, actions):
         # player's movement
-        # input_actions[0] == 1: keep strait
-        # input_actions[1] == 1: turn left
-        # input_actions[2] == 1: tuen right
-        # input_actions[3] == 1: speed up
-        # input_actions[4] == 1: slow down
+        # actions == 0: keep strait
+        # actions == 1: turn left
+        # actions == 2: tuen right
+        # actions == 3: speed up
+        # actions == 4: slow down
         
         reward = 0.5
         terminal = False
 
-        # turn left
-        if actions == 1:
-            if self.lane == 0:
-                self.lane = 1 
-                self.playerx = LANE[self.lane] 
-            elif self.lane == 1:
-                reward = -1
-                terminal = True
-            elif self.lane == 2:
-                reward = -1
-                terminal = True
-            else:
-                self.lane  = 2
-                self.playerx = LANE[self.lane] 
+        # Reward = namedtuple('Reward', ('reward, terminal, lane, x , acc_delta, up'))
+        # get reward by check the reward_scheme
 
-        # turn right
-        if actions == 2:
-            if self.lane == 0:
-                reward = -1
-                terminal = True
-                
-            elif self.lane == 1:
-                self.lane = 0
-                self.playerx = LANE[self.lane]
-
-            elif self.lane == 2:
-                self.lane = 3
-                self.playerx = LANE[self.lane]
-            else: 
-                reward = -1
-                terminal = True
-        
-        # speed up
-        if actions == 3:
-            self.playerAccY = 1
-            reward = 1
-
-        # slow down
-        if actions == 4:
-            self.playerAccY = -2
-
+        reward_info = reward_scheme[self.up][self.lane][actions]
+        reward, terminal,  = reward_info.reward, reward_info.terminal
+        self.lane, self.playerx  = reward_info.lane, reward_info.x
+        self.playerAccY, self.up = self.playerAccY + reward_info.acc_delta, reward_info.up
+ 
         # summary
 
         self.playerVelY += self.playerAccY
@@ -166,10 +196,12 @@ class GameState:
 
         self.playery -= self.playerVelY
         
-        if self.playery < 0:
+        if self.playery < 0 and self.up :
             self.circle = True
 
-       
+        # A hack, try to encourage speed up
+        if not terminal and self.playerVelY == 0:
+            reward = -0.5
 
         return reward, terminal
 
@@ -188,20 +220,16 @@ class GameState:
             self.white_cars.pop(idx)
 
             # update car maps
-            for index, pair in enumerate(self.car_maps[lane]):
-                key, _ , _ = pair
-                if key == idx:
+            for index, car in enumerate(self.car_maps[lane]):
+        
+                if idx == car.idx:
                     self.car_maps[lane].pop(index)
                     break
 
             # generate new cars 
             if random.randint(0,1) == 1 or len(self.white_cars) < 3:
-                _ , lane = self.add_one_car(idx, begin=True)
+                _  = self.add_one_car(idx, begin=True)
 
-
-            # update car maps for all other white cars
-            for elem in self.white_cars:
-                self.white_cars[elem].update_car_map(self.car_maps)
 
     def draw_parking(self):    
         # draw 4 parking plot
@@ -212,24 +240,42 @@ class GameState:
 
     def check_crash(self):
         # check crash with white car
-        reward = 0.5
+        
         terminal = False
         for elem in self.white_cars:
             x,y = self.white_cars[elem].getXY()
             if check_collision(self.playerx, self.playery, x, y):
-                reward = -1
                 terminal = True
                 break
 
-        return reward, terminal
+        return terminal
+
+    def update_global_env(self):
+         # reform global car map
+        self.car_maps = {0:[], 1:[], 2:[],3:[]} 
+        self.car_maps[self.lane].append(Car(self.max_white_car, self.playerVelY, self.lane, self.playery, self.up))
+
+
+        for elem in self.white_cars:
+            x, y = self.white_cars[elem].getXY()
+            lane = self.white_cars[elem].getLane()
+            speed = self.white_cars[elem].getSpeed()
+            up = self.white_cars[elem].isUp()
+            self.car_maps[lane].append(Car(elem, speed, lane, y, up))
+
+        # update environment
+        self.env.set_lane_info(self.car_maps)
+
+        # update environment for every white car
+        for elem in self.white_cars:
+            self.white_cars[elem].update_env(self.env)
 
     def frame_step(self, input_actions):
         pygame.event.pump()
 
-        
 
         if input_actions < 0 or input_actions > 5 :
-            raise ValueError('Not a valid operatio')
+            raise ValueError('Not a valid operation')
 
         # update player
         reward, terminal = self.update_player(input_actions)
@@ -238,7 +284,7 @@ class GameState:
         self.update_white_car()
 
         # check if crash here
-        reward, terminal = self.check_crash()
+        terminal = self.check_crash()
        
         # get entire new screen
         if self.circle:
@@ -246,18 +292,8 @@ class GameState:
             self.circle = False
             self.init_white_car()
 
-        # reform global car map
-        self.car_maps = {0:[], 1:[], 2:[],3:[]} # key is lane, and value is (key,y, speed) pair
-        self.car_maps[self.lane].append((self.max_white_car, self.playery, self.playerVelY))
-
-        for elem in self.white_cars:
-            x, y = self.white_cars[elem].getXY()
-            lane = self.white_cars[elem].getLane()
-            speed = self.white_cars[elem].getSpeed()
-            self.car_maps[lane].append((elem, y, speed))
-
-        for elem in self.white_cars:
-            self.white_cars[elem].update_car_map(self.car_maps)
+        # update global info and each cars local info
+        self.update_global_env()
         
         # handle termianl case
         if terminal:
@@ -282,9 +318,11 @@ class GameState:
                 SCREEN.blit(IMAGES['white_car'], (x,y))
 
         #self.draw_parking()
+        
         # encouge speed up
         if not terminal and self.playerVelY == 0:
             reward = -0.5
+        
         # update score
         if reward >= 0:
             score_update = int(reward*2)
