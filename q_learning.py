@@ -6,21 +6,26 @@ import math
 sys.path.append("game/")
 import deep_traffic as game
 import random
-import cv2
 from itertools import count
 from copy import deepcopy
-from PIL import Image
+
 from utils import *
 import os
 import time
 
-# need to install torch
-import torch
-import torch.nn as nn
-import torch.optim as optim
-import torch.autograd as autograd
-import torch.nn.functional as F
-import torchvision.transforms as T
+try:
+    import cv2
+    from PIL import Image
+    # need to install torch
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+    import torch.autograd as autograd
+    import torch.nn.functional as F
+    import torchvision.transforms as T
+except:
+    if sys.argv[1] != test:
+        raise Exception('Need have torch, PIL, opencv2 to train the model and play game')
 
 # game constant
 GAME = 'Deep Traffic' # the name of the game being played for log files
