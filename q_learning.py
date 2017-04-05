@@ -247,7 +247,7 @@ def train_model():
 def test_simulator(t_max):
 	s = game.GameState()
 	do_nothing = np.zeros(ACTIONS)
-	do_nothing[0] = 1
+	do_nothing = 0
 	
 	t = 0
 	while t < t_max:
@@ -284,6 +284,12 @@ def load_model():
 	print('The game last for {} seconds'.format(cur_time-start))
 
 if __name__ == "__main__":
-	
-    #train_model()
-	load_model()
+
+	if sys.argv[1] == 'train':
+		train_model()
+	elif sys.argv[1] == 'play':
+		load_model()
+	elif sys.argv[1] == 'test':
+		test_simulator(1000)
+	else:
+		sys.exit("Wrong command")
