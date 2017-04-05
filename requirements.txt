@@ -1,4 +1,5 @@
 pygame
+numpy
 opencv-python
 http://download.pytorch.org/whl/torch-0.1.11.post5-cp27-none-macosx_10_7_x86_64.whl 
 torchvision

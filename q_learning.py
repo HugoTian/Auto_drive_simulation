@@ -8,7 +8,7 @@ import deep_traffic as game
 import random
 from itertools import count
 from copy import deepcopy
-
+import numpy as np
 from utils import *
 import os
 import time
@@ -60,7 +60,7 @@ try:
                     T.ToTensor()])
 except:
     pass
-    
+
 def Variable(data, *args, **kwargs):
  
     # torch variable class
@@ -121,7 +121,8 @@ memory = ReplayBuffer(10000)
 optimizer = optim.RMSprop(model.parameters())
 
 if USE_CUDA:
-	model.cuda()
+    model.cuda()
+
 
 def get_roi(x,y):
     # get the region of interests
@@ -140,6 +141,7 @@ def get_roi(x,y):
     # Resize, and add a batch dimension (BCHW)
     return resize(screen).unsqueeze(0)
 
+
 def select_action(state):
     # given state, selection action,
     global steps_done
@@ -151,11 +153,12 @@ def select_action(state):
         # some times use the model to select actions
         # action with max score
         state = Variable(state, volatile=True)
-        return  model(state).data.max(1)[1].cpu()
+        return model(state).data.max(1)[1].cpu()
         
     else:
         # some time just random action
         return torch.LongTensor([[random.randrange(ACTIONS)]])
+
 
 def optimize_model():
     # need to sample more
@@ -181,7 +184,6 @@ def optimize_model():
 
     action_batch = Variable(torch.cat(batch.action))
 
-
     # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
     # columns of actions taken
     state_action_values = model(state_batch).gather(1, action_batch)
@@ -192,7 +194,7 @@ def optimize_model():
     # Now, we don't want to mess up the loss with a volatile flag, so let's
     # clear it. After this, we'll just end up with a Variable that has
     # requires_grad=False
-    #next_state_values.volatile = False
+    # next_state_values.volatile = False
     # Compute the expected Q values
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 
@@ -212,26 +214,26 @@ def train_model(path='model'):
     s = game.GameState()
     do_nothing = 0
 
-    image_data , reward , terminate , (x, y) = s.frame_step(do_nothing)
+    image_data, reward, terminate, (x, y) = s.frame_step(do_nothing)
     index = time.time()
     cur_time = time.time()
-    while  cur_time - index < 900:
-        last_screen = get_roi(x,y)
-        current_screen = get_roi(x,y)
+    while cur_time - index < 900:
+        last_screen = get_roi(x, y)
+        current_screen = get_roi(x, y)
         
         state = current_screen - last_screen
         for t in count():
             # Select and perform an action
             action = select_action(state)
 
-            _, reward, done, (x,y) = s.frame_step(action[0][0])
+            _, reward, done, (x, y) = s.frame_step(action[0][0])
 
             reward = torch.Tensor([reward])
 
             # Observe new state
             last_screen = current_screen
             current_screen = get_roi(x,y)
-            #print (last_screen.size(), current_screen.size())
+            # print (last_screen.size(), current_screen.size())
 
             if not done:
                 next_state = current_screen - last_screen
@@ -248,11 +250,13 @@ def train_model(path='model'):
             optimize_model()
 
             if done:
-        		break
-    	cur_time = time.time()
+                break
+
+    cur_time = time.time()
 
     with open(path, 'w') as f:
-    	torch.save(model.state_dict(), f)
+        torch.save(model.state_dict(), f)
+
 
 def test_simulator(t_max):
     s = game.GameState()
@@ -264,44 +268,45 @@ def test_simulator(t_max):
             action = 4
         image_data , reward , terminate , (x, y) = s.frame_step(action)
         
-        t = t + 1
+        t += 1
 
  
 def load_model(path):
-	trained_model = DQN()
-	trained_model.load_state_dict(torch.load(path))
 
-	if USE_CUDA:
-		trained_model.cuda()
+    trained_model = DQN()
+    trained_model.load_state_dict(torch.load(path))
 
-	s = game.GameState()
-	image_data , reward , terminate , (x, y) = s.frame_step(0)
+    if USE_CUDA:
+        trained_model.cuda()
 
-	last_screen = get_roi(x,y)
-	start = time.time()
-	while not terminate:
+    s = game.GameState()
+    image_data , reward , terminate , (x, y) = s.frame_step(0)
 
-		current_screen = get_roi(x,y)
+    last_screen = get_roi(x,y)
+    start = time.time()
 
-		state = current_screen - last_screen
+    while not terminate:
+        current_screen = get_roi(x,y)
+        state = current_screen - last_screen
+        # Select and perform an action
+        action = trained_model(Variable(state)).data.max(1)[1].cpu()
+        _, reward, terminate, (x,y) = s.frame_step(action[0][0])
+        last_screen = current_screen
 
-		# Select and perform an action
-		action = trained_model(Variable(state)).data.max(1)[1].cpu()
+    cur_time = time.time()
+    print('The game last for {} seconds'.format(cur_time-start))
 
-		_, reward, terminate, (x,y) = s.frame_step(action[0][0])
-
-		last_screen = current_screen
-
-	cur_time = time.time()
-	print('The game last for {} seconds'.format(cur_time-start))
 
 if __name__ == "__main__":
-
-	if sys.argv[1] == 'train':
-		train_model(path=sys.argv[2])
-	elif sys.argv[1] == 'play':
-		load_model(sys.argv[2])
-	elif sys.argv[1] == 'test':
-		test_simulator(1000)
-	else:
-		sys.exit("Wrong command")
+    if sys.argv[1] == 'train':
+        if len(sys.argv) > 2:
+            train_model(path=sys.argv[2])
+        else:
+            train_model()
+            
+    elif sys.argv[1] == 'play':
+        load_model(sys.argv[2])
+    elif sys.argv[1] == 'test':
+        test_simulator(1000)
+    else:
+        sys.exit("Wrong command")
