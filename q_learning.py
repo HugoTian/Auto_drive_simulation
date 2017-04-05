@@ -24,7 +24,7 @@ try:
     import torch.nn.functional as F
     import torchvision.transforms as T
 except:
-    if sys.argv[1] != test:
+    if sys.argv[1] != 'test':
         raise Exception('Need have torch, PIL, opencv2 to train the model and play game')
 
 # game constant
