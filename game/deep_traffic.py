@@ -169,6 +169,8 @@ class GameState:
         if self.playery < 0:
             self.circle = True
 
+       
+
         return reward, terminal
 
     def update_white_car(self):
@@ -280,7 +282,9 @@ class GameState:
                 SCREEN.blit(IMAGES['white_car'], (x,y))
 
         #self.draw_parking()
-                
+        # encouge speed up
+        if not terminal and self.playerVelY == 0:
+            reward = -0.5
         # update score
         if reward >= 0:
             score_update = int(reward*2)

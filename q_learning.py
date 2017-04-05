@@ -12,10 +12,10 @@ from itertools import count
 from copy import deepcopy
 from PIL import Image
 from utils import *
-from policy import *
+import os
+import time
 
 # need to install torch
-
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -30,14 +30,88 @@ ACTIONS = 5 # number of valid actions
 #  For training the model
 BATCH_SIZE = 128
 GAMMA = 0.999
+# region of interest, crop screen to find ROI
+ROI_WIDTH = 200
+ROI_HEIGHT = 100
+CONV_SIZE = 80
+
+# learning parameter
+EPS_START = 0.9
+EPS_END = 0.05
+EPS_DECAY = 200
+USE_CUDA = torch.cuda.is_available()
+
+# named tuple to record state transitions
+Transition = namedtuple('Transition',
+                        ('state', 'action', 'next_state', 'reward', 'terminate'))
+
+# use pytorch build in model to convert image to CONV_SIZE  * CONV_SIZE
+
+resize = T.Compose([T.ToPILImage(),
+                    T.Scale(CONV_SIZE, interpolation=Image.CUBIC),
+                    T.ToTensor()])
+
+def Variable(data, *args, **kwargs):
+ 
+    # torch variable class
+    
+    if USE_CUDA:
+    	return autograd.Variable(data, *args, **kwargs).cuda()
+    else:
+    	return autograd.Variable(data, *args, **kwargs)    
+
+class ReplayBuffer():
+    # the Buffer to store all the frames
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.memory = []
+        self.position = 0
+
+    def push(self, *args):
+        if len(self.memory) < self.capacity:
+            self.memory.append(None)
+
+        self.memory[self.position] = Transition(*args)
+        self.position = (self.position + 1 ) % self.capacity    
+
+    def sample(self, batch_size):
+        # get minibatch of images
+        return random.sample(self.memory, batch_size)
+
+    def __len__(self):
+        return len(self.memory)
+
+class DQN(nn.Module):
+    # the network to train and test the model
+    def __init__(self):
+        super(DQN, self).__init__()
+        self.conv1 = nn.Conv2d(3, 16, kernel_size=5, stride=2)
+        self.pool  = nn.MaxPool2d(2,2)
+        self.conv2 = nn.Conv2d(16,32, kernel_size=5, stride=2)
+        self.bn2 = nn.BatchNorm2d(32)
+        self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
+        self.bn3 = nn.BatchNorm2d(32)
+        self.fc1 = nn.Linear(128, 64)
+        self.fc2   = nn.Linear(64, ACTIONS)
+    def forward(self, x):
+        x = F.relu(self.pool(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = x.view(-1, 128)
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return x
 
 
 # global variable
 steps_done = 0
 
-model = net()
+model = DQN()
 memory = ReplayBuffer(10000)
 optimizer = optim.RMSprop(model.parameters())
+
+if USE_CUDA:
+	model.cuda()
 
 def get_roi(x,y):
     # get the region of interests
@@ -66,11 +140,12 @@ def select_action(state):
     if sample > eps_threshold:
         # some times use the model to select actions
         # action with max score
-        ac=  model(Variable(state, volatile=True)).data.max(1)[1].cpu()
-        return ac[0][0]
+        state = Variable(state, volatile=True)
+        return  model(state).data.max(1)[1].cpu()
+        
     else:
         # some time just random action
-        return random.randint(0, ACTIONS-1)
+        return torch.LongTensor([[random.randrange(ACTIONS)]])
 
 def optimize_model():
     # need to sample more
@@ -81,33 +156,33 @@ def optimize_model():
     batch = Transition(*zip(*transitions))
 
     # Compute a mask of non-final states and concatenate the batch elements
-    non_final_mask = torch.ByteTensor(
-        tuple(map(lambda s: s == False , batch.terminate)))
+    non_final_mask = torch.ByteTensor(tuple(map(lambda s: s is not None, batch.next_state)))
+
     if USE_CUDA:
         non_final_mask = non_final_mask.cuda()
 
     # We don't want to backprop through the expected action values and volatile
     # will save us on temporarily changing the model parameters'
     # requires_grad to False!
-    non_final_next_states = Variable(torch.cat([s for s in batch.next_state
-                                                if s is not None]),
-                                     volatile=True)
+    non_final_next_states = Variable(torch.cat([s for s in batch.next_state if s is not None]), volatile=True)
 
     state_batch = Variable(torch.cat(batch.state))
-    action_batch = Variable(torch.cat(batch.action))
     reward_batch = Variable(torch.cat(batch.reward))
+
+    action_batch = Variable(torch.cat(batch.action))
+
 
     # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
     # columns of actions taken
     state_action_values = model(state_batch).gather(1, action_batch)
 
     # Compute V(s_{t+1}) for all next states.
-    next_state_values = Variable(torch.zeros(BATCH_SIZE))
+    next_state_values = Variable(torch.zeros(BATCH_SIZE), volatile=False)
     next_state_values[non_final_mask] = model(non_final_next_states).max(1)[0]
     # Now, we don't want to mess up the loss with a volatile flag, so let's
     # clear it. After this, we'll just end up with a Variable that has
     # requires_grad=False
-    next_state_values.volatile = False
+    #next_state_values.volatile = False
     # Compute the expected Q values
     expected_state_action_values = (next_state_values * GAMMA) + reward_batch
 
@@ -128,8 +203,9 @@ def train_model():
     do_nothing = 0
 
     image_data , reward , terminate , (x, y) = s.frame_step(do_nothing)
-
-    while True:
+    index = time.time()
+    cur_time = time.time()
+    while  cur_time - index < 900:
         last_screen = get_roi(x,y)
         current_screen = get_roi(x,y)
         
@@ -138,14 +214,14 @@ def train_model():
             # Select and perform an action
             action = select_action(state)
 
-            _, reward, done, (x,y) = s.frame_step(action)
+            _, reward, done, (x,y) = s.frame_step(action[0][0])
 
             reward = torch.Tensor([reward])
 
             # Observe new state
             last_screen = current_screen
             current_screen = get_roi(x,y)
-            print (last_screen.size(), current_screen.size())
+            #print (last_screen.size(), current_screen.size())
 
             if not done:
                 next_state = current_screen - last_screen
@@ -162,7 +238,11 @@ def train_model():
             optimize_model()
 
             if done:
-                break
+        		break
+    	cur_time = time.time()
+
+    with open('model', 'w') as f:
+    	torch.save(model.state_dict(), f)
 
 def test_simulator(t_max):
 	s = game.GameState()
@@ -174,8 +254,36 @@ def test_simulator(t_max):
 		image_data , reward , terminate , (x, y) = s.frame_step(do_nothing)
 		t = t + 1
 
-        
+ 
+def load_model():
+	trained_model = DQN()
+	trained_model.load_state_dict(torch.load('model'))
+
+	if USE_CUDA:
+		trained_model.cuda()
+
+	s = game.GameState()
+	image_data , reward , terminate , (x, y) = s.frame_step(0)
+
+	last_screen = get_roi(x,y)
+	start = time.time()
+	while not terminate:
+
+		current_screen = get_roi(x,y)
+
+		state = current_screen - last_screen
+
+		# Select and perform an action
+		action = trained_model(Variable(state)).data.max(1)[1].cpu()
+
+		_, reward, terminate, (x,y) = s.frame_step(action[0][0])
+
+		last_screen = current_screen
+
+	cur_time = time.time()
+	print('The game last for {} seconds'.format(cur_time-start))
 
 if __name__ == "__main__":
 	
-    train_model()
+    #train_model()
+	load_model()
