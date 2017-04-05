@@ -43,18 +43,24 @@ CONV_SIZE = 80
 EPS_START = 0.9
 EPS_END = 0.05
 EPS_DECAY = 200
-USE_CUDA = torch.cuda.is_available()
+
+try:
+    USE_CUDA = torch.cuda.is_available()
+except:
+    USE_CUDA = False
 
 # named tuple to record state transitions
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward', 'terminate'))
 
 # use pytorch build in model to convert image to CONV_SIZE  * CONV_SIZE
-
-resize = T.Compose([T.ToPILImage(),
+try:
+    resize = T.Compose([T.ToPILImage(),
                     T.Scale(CONV_SIZE, interpolation=Image.CUBIC),
                     T.ToTensor()])
-
+except:
+    pass
+    
 def Variable(data, *args, **kwargs):
  
     # torch variable class
