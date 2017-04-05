@@ -197,7 +197,7 @@ def optimize_model():
     optimizer.step()
 
 
-def train_model():
+def train_model(path='model'):
     # initialize the game
     s = game.GameState()
     do_nothing = 0
@@ -241,7 +241,7 @@ def train_model():
         		break
     	cur_time = time.time()
 
-    with open('model', 'w') as f:
+    with open(path, 'w') as f:
     	torch.save(model.state_dict(), f)
 
 def test_simulator(t_max):
@@ -255,9 +255,9 @@ def test_simulator(t_max):
 		t = t + 1
 
  
-def load_model():
+def load_model(path):
 	trained_model = DQN()
-	trained_model.load_state_dict(torch.load('model'))
+	trained_model.load_state_dict(torch.load(path))
 
 	if USE_CUDA:
 		trained_model.cuda()
@@ -286,9 +286,9 @@ def load_model():
 if __name__ == "__main__":
 
 	if sys.argv[1] == 'train':
-		train_model()
+		train_model(path=sys.argv[2])
 	elif sys.argv[1] == 'play':
-		load_model()
+		load_model(sys.argv[2])
 	elif sys.argv[1] == 'test':
 		test_simulator(1000)
 	else:
