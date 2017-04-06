@@ -1,11 +1,5 @@
-import sys
-import random
-import pygame
 from utils import *
-import pygame.surfarray as surfarray
-from pygame.locals import *
-from itertools import cycle
-
+import random
 
 class WhiteCar:
 
@@ -23,7 +17,21 @@ class WhiteCar:
         self.speed = speed
         self.env = env
 
+        self.up_dict = {True: {
+                                'speed': -1,
+                                'light': 1,
+                                'stop': RED_STOP_UP
+
+                              },
+                       False: {
+                                'speed': 1,
+                                'light': 0,
+                                'stop': RED_STOP_DOWN
+                               }
+                       }
+
     def update_env(self, env):
+
         self.env = env
 
     def direct_update(self, y):
@@ -34,34 +42,25 @@ class WhiteCar:
         # smart update of white car
         removed = False
 
-        if not self.up:
-            # going down
-            self.y = self.y + self.speed
+        # update y
+        y_delta = self.up_dict[self.up]['speed'] * self.speed
+        self.y += y_delta
 
-            # check out of bound
-            if self.y >  SCREENHEIGHT :
-                removed = True
-                return removed, self.key
-            # check same lane collision
-            crash, crashed_car , back = self.check_crash_white_car(self.lane)
+        # check out of bound
+        if self.y < 0 or self.y > SCREENHEIGHT:
+            removed = True
+            return removed, self.key
 
-            if crash and back:
-                self.handle_crash(crashed_car)
-        else:
+        # handle traffic
+        self.handle_traffic_light()
 
-            self.y = self.y - self.speed
+        # handle crash
+        crash, crashed_car, back = self.check_crash_white_car(self.lane)
 
-            # check out of bound
-            if self.y < 0:
-                removed = True
-                return removed, self.key
+        if crash and back:
 
-            # same lane crash
-            crash , crashed_car, back = self.check_crash_white_car(self.lane)
-
-            if crash and back:
-                # if crash change lane or slow down 
-                self.handle_crash(crashed_car)
+            self.handle_crash(crashed_car)
+            # debug print(self.key, self.lane, self.speed, crashed_car.speed, crashed_car.lane , crashed_car.idx)
 
         return removed, self.key
 
@@ -78,7 +77,6 @@ class WhiteCar:
         else:
             self.speed = crashed_car.speed
 
-
     def get_cars_in_lane(self, lane):
         # get all the cars in lane except for myself
         car_list = []
@@ -92,7 +90,7 @@ class WhiteCar:
 
         # check whether crash with  cars on lane
         # return crash, crashed_car_id, whether I am at back(slow down or change_lane)
-        from deep_traffic import check_collision
+        from .deep_traffic import check_collision
         crash = False
         crashed_car = None
         back = None
@@ -105,13 +103,42 @@ class WhiteCar:
                 crashed_car = car
 
                 if self.up:
-                    back = self.y > car.y
+                    back = bool(self.y > car.y)
                 else:
-                    back = self.y < car.y
+                    back = bool(self.y < car.y)
 
                 return crash, crashed_car, back
         
         return crash, crashed_car, back
+
+
+    def try_speed_up(self):
+
+        old_speed = self.speed
+        old_y = self.y
+
+        self.speed = random.randint(1, 5)
+        self.y += self.up_dict[self.up]['speed']
+
+        crash, _, _ = self.check_crash_white_car(self.lane)
+        if crash:
+            self.speed = old_speed
+        self.y = old_y
+
+    def handle_traffic_light(self):
+
+        # get the traffic light
+        traffic_light = self.env.get_traffic()
+        red = traffic_light[self.up_dict[self.up]['light']].red
+
+        # stop
+        if red and abs(self.y - self.up_dict[self.up]['stop']) < 5:
+            self.y = self.up_dict[self.up]['stop']
+            self.speed = 0
+
+        # if not stop
+        if not red and self.speed == 0:
+            self.try_speed_up()
 
 
     def getXY(self):

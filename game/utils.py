@@ -1,6 +1,4 @@
 import pygame
-import sys
-
 from collections import namedtuple
 
 FPS = 30
@@ -20,12 +18,15 @@ BASE_SHIFT = 100
 LIGHT_INTERVAL = 100
 LIGHT1_POS = (50, 360)
 LIGHT2_POS = (500, 360)
+RED_STOP_UP = 460
+RED_STOP_DOWN = 340
 
 Car = namedtuple('Car', ('idx', 'speed', 'lane', 'y', 'upwards'))
 Pedestrain = namedtuple('Pedestrain', ('idx', 'speed', 'x', 'y', 'left'))
 TrafficLight = namedtuple('Traffic', ('x', 'y', 'red'))
 Parking = namedtuple('Parking', ('lane', 'y', 'available'))
 Reward = namedtuple('Reward', ('reward, terminal, lane, x, acc_delta, up'))
+
 
 class Environment:
     # the environment, the location and status of every object in screen

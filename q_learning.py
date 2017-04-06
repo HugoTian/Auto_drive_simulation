@@ -1,17 +1,14 @@
 #!/usr/bin/env python
 from __future__ import print_function
-from collections import  namedtuple
+
 import sys
 import math
-sys.path.append("game/")
-import deep_traffic as game
-import random
+import game.deep_traffic as game
 from itertools import count
-from copy import deepcopy
 import numpy as np
-from utils import *
-import os
+from game.utils import *
 import time
+import random
 
 try:
     import cv2
@@ -61,6 +58,7 @@ try:
 except:
     pass
 
+
 def Variable(data, *args, **kwargs):
  
     # torch variable class
@@ -91,6 +89,7 @@ class ReplayBuffer():
     def __len__(self):
         return len(self.memory)
 
+
 class DQN(nn.Module):
     # the network to train and test the model
     def __init__(self):
@@ -102,7 +101,8 @@ class DQN(nn.Module):
         self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
         self.bn3 = nn.BatchNorm2d(32)
         self.fc1 = nn.Linear(128, 64)
-        self.fc2   = nn.Linear(64, ACTIONS)
+        self.fc2 = nn.Linear(64, ACTIONS)
+
     def forward(self, x):
         x = F.relu(self.pool(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
@@ -124,7 +124,7 @@ if USE_CUDA:
     model.cuda()
 
 
-def get_roi(x,y):
+def get_roi(x, y):
     # get the region of interests
     screen = pygame.surfarray.array3d(pygame.display.get_surface())
     
@@ -307,6 +307,6 @@ if __name__ == "__main__":
     elif sys.argv[1] == 'play':
         load_model(sys.argv[2])
     elif sys.argv[1] == 'test':
-        test_simulator(1000)
+        test_simulator(2000)
     else:
         sys.exit("Wrong command")
