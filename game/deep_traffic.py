@@ -77,7 +77,7 @@ class GameState:
         # env : The global environment, every object in simulator have the same env (See Environment Class in utils)
 
         self.score = 0  
-        
+        self.num_frame = 0
         # player
         self.playerx = LANE[2]
         self.playery = SCREENHEIGHT - RED_CAR_HEIGHT
@@ -96,6 +96,10 @@ class GameState:
         # screen
         self.circle = False # player goes so fast, need to update entire screen
 
+        # traffic light
+        self.light1 = TrafficLight(LIGHT1_POS[0], LIGHT1_POS[1], False)
+        self.light2 = TrafficLight(LIGHT2_POS[0], LIGHT2_POS[1], False)
+        self.green_starts = 0
         # white car
         self.max_white_car = 7
         self.white_cars = {} # key is idx, and value is white car object
@@ -104,7 +108,7 @@ class GameState:
         self.car_maps = {0:[], 1:[], 2:[],3:[]} # key is lane, and value is (key,y, speed) pair
         self.car_maps[self.lane].append(Car(self.max_white_car, self.playerVelY, self.lane, self.playery, self.up))
 
-        self.env = Environment(self.car_maps, None, None, None)
+        self.env = Environment(self.car_maps, [self.light1, self.light2], None, None)
         self.init_white_car()
 
     def add_one_car(self, i, begin=False):
@@ -237,6 +241,31 @@ class GameState:
         SCREEN.blit(IMAGES['park'], (450,100))
         SCREEN.blit(IMAGES['park'], (450,630))
 
+    def update_traffic_light(self):
+
+        if self.num_frame - self.green_starts == 3 * LIGHT_INTERVAL:
+            self.light1 = TrafficLight(LIGHT1_POS[0], LIGHT1_POS[1], True)
+            self.light2 = TrafficLight(LIGHT2_POS[0], LIGHT2_POS[1], True)
+
+        if self.num_frame - self.green_starts == 4 * LIGHT_INTERVAL:
+            self.light1 = TrafficLight(LIGHT1_POS[0], LIGHT1_POS[1], False)
+            self.light2 = TrafficLight(LIGHT2_POS[0], LIGHT2_POS[1], False)
+            self.green_starts = self.num_frame
+
+        self.env.set_traffic_info([self.light1, self.light2])
+ 
+    def draw_traffic_light(self):
+
+        if self.light1.red:
+            SCREEN.blit(IMAGES['red_light'], LIGHT1_POS)
+        else:
+            SCREEN.blit(IMAGES['green_light'], LIGHT1_POS)
+
+        if self.light2.red:
+            SCREEN.blit(IMAGES['red_light'], LIGHT2_POS)
+        else:
+            SCREEN.blit(IMAGES['green_light'], LIGHT2_POS)
+
     def check_crash(self):
         # check crash with white car
         
@@ -270,21 +299,27 @@ class GameState:
             self.white_cars[elem].update_env(self.env)
 
     def frame_step(self, input_actions):
+        # update frame number 
+        self.num_frame += 1
+
         pygame.event.pump()
 
 
         if input_actions < 0 or input_actions > 5 :
             raise ValueError('Not a valid operation')
 
-        # update player
-        reward, terminal = self.update_player(input_actions)
-
+        
         # update white car
         self.update_white_car()
 
+        
+
+        # update player
+        reward, terminal1 = self.update_player(input_actions)
+
         # check if crash here
-        terminal = self.check_crash()
-       
+        terminal2 = self.check_crash()
+
         # get entire new screen
         if self.circle:
             self.playery = SCREENHEIGHT - RED_CAR_HEIGHT
@@ -293,6 +328,8 @@ class GameState:
 
         # update global info and each cars local info
         self.update_global_env()
+        
+        terminal = terminal1 or terminal2
         
         # handle termianl case
         if terminal:
@@ -316,8 +353,10 @@ class GameState:
             else:
                 SCREEN.blit(IMAGES['white_car'], (x,y))
 
-        #self.draw_parking()
-        
+        # traffic light
+        self.update_traffic_light()
+        self.draw_traffic_light()
+
         # encouge speed up
         if not terminal and self.playerVelY == 0:
             reward = -0.5

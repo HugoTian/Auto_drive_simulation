@@ -7,6 +7,7 @@ FPS = 30
 SCREENWIDTH  = 600
 SCREENHEIGHT = 800
 
+# lane
 LANE = {}
 LANE[0] = 150
 LANE[1] = 240
@@ -14,6 +15,11 @@ LANE[2] = 330
 LANE[3] = 400
 
 BASE_SHIFT = 100
+
+# traffic light constant
+LIGHT_INTERVAL = 100
+LIGHT1_POS = (50, 360)
+LIGHT2_POS = (500, 360)
 
 Car = namedtuple('Car', ('idx', 'speed', 'lane', 'y', 'upwards'))
 Pedestrain = namedtuple('Pedestrain', ('idx', 'speed', 'x', 'y', 'left'))
@@ -26,7 +32,7 @@ class Environment:
     # every object in screen has a Environment obejct as attribute
     def __init__(self, lane_info, traffic_info, pedestrain, parking):
         # lane_info : infomation of lane, dict like {0 : list(Car), 1 : list(Car)}
-        # traffic_info : TrafficLight (To make it simple, just one traffic light now)
+        # traffic_info : TrafficLight :  list(TrafficLight)
         # pedestrain : list(Pedestrain)
         # parking : list(Parking) , list of parking infomation
         self.lane_info = lane_info
@@ -75,6 +81,8 @@ def load():
     ROAD_PATH = 'Images/road.png'
     BACKGROUND_PATH = 'Images/background-black.png'
     PARKING_PATH = 'Images/parking.png'
+    RED_TRIFFIC_LIGHT_PATH = 'Images/red.png'
+    GREEN_TRAFFIC_LIGHT_PATH = 'Images/green.png'    
 
     IMAGES = {}
     IMAGES['road'] =  pygame.image.load(ROAD_PATH).convert()
@@ -83,6 +91,9 @@ def load():
     IMAGES['white_car_reverse'] = pygame.image.load(WHITE_CAR_REVERSE_PATH).convert()
     IMAGES['background'] = pygame.image.load(BACKGROUND_PATH).convert()
     IMAGES['park'] = pygame.image.load(PARKING_PATH).convert()
+    IMAGES['red_light'] = pygame.image.load(RED_TRIFFIC_LIGHT_PATH).convert()
+    IMAGES['green_light'] = pygame.image.load(GREEN_TRAFFIC_LIGHT_PATH).convert()
+    
     IMAGES['numbers'] = (
         pygame.image.load('Images/0.png').convert_alpha(),
         pygame.image.load('Images/1.png').convert_alpha(),
