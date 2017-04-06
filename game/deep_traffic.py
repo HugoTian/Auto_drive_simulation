@@ -1,6 +1,6 @@
 import random
-from utils import *
-from white_car import WhiteCar
+from .utils import *
+from .white_car import WhiteCar
 
 pygame.init()
 FPSCLOCK = pygame.time.Clock()
