@@ -42,12 +42,11 @@ Where image is the current screen of simulator, reward is current reward, termin
 To train the model, need torch and pytorch installed, you may look reference [here](http://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
 
 To Do 
-   1. Add traffic light
-   2. Add people
-   3. Add park
-   4. Design reward system to make better player
-   5. Make simulator stable
-   6. Reduce library dependency
+   1. Add people
+   2. Add park
+   3. Design reward system to make better player
+   4. Make simulator stable
+   5. Reduce library dependency
    
    
 
