@@ -16,7 +16,11 @@ class WhiteCar:
         self.x = LANE[lane]
         self.speed = speed
         self.env = env
-        self.parking = False
+        self.park = False
+        self.park_time = 0
+        self.park_random = random.randint(200,400)
+
+        self.change_lane_map = {0:1, 1:0, 2:3, 3:2} # possible ways to change lane
         self.up_dict = {True: {
                                 'speed': -1,
                                 'light': 1,
@@ -60,21 +64,44 @@ class WhiteCar:
         crash, crashed_car, back = self.check_crash_white_car(self.lane)
 
         if crash and back:
-
             self.handle_crash(crashed_car)
             # debug print(self.key, self.lane, self.speed, crashed_car.speed, crashed_car.lane , crashed_car.idx)
+        elif not self.park:
+            # make it fun
+            if random.randint(0, 5) == 0:
+                self.try_speed_up()
+
+        # try change lane when in green light, avoid forever blocking by parked car
+        if not self.park and self.speed == 0 and not self.env.get_traffic()[self.up_dict[self.up]['light']].red:
+            self.try_change_lane()
+        
+        # park ?
+        self.park_or_not()
 
         return removed, self.key
 
     def park_or_not(self):
         # decide whether to park
-        pass
+        if self.park:
+            self.park_time += 1
+        else:
+            self.park_time = 0
+
+        if self.lane == self.up_dict[self.up]['park'] and (self.y > RED_STOP_UP or self.y < RED_STOP_DOWN):
+            if random.randint(0,self.park_random) == 0:
+                # park
+                self.park = True
+                self.speed = 0
+
+        if self.park_time > self.park_random:
+            self.park = False
+            self.park_time = 0
 
     def handle_crash(self, crashed_car):
         # if there is a possible crash, need to handle that
-        change_lane_map = {0:1, 1:0, 2:3, 3:2} # possible ways to change lane
+        
 
-        new_lane = change_lane_map[self.lane]
+        new_lane = self.change_lane_map[self.lane]
         crash, _, _ = self.check_crash_white_car(new_lane)
 
         if not crash:
@@ -123,7 +150,10 @@ class WhiteCar:
         old_speed = self.speed
         old_y = self.y
 
-        self.speed = random.randint(1, 5)
+        self.speed = self.speed + 1
+        if self.speed > 5:
+            self.speed = 5
+
         self.y += self.up_dict[self.up]['speed']
 
         crash, _, _ = self.check_crash_white_car(self.lane)
@@ -132,8 +162,15 @@ class WhiteCar:
         self.y = old_y
 
     def try_change_lane(self):
-        # try change lane and speed up
-        pass
+        # try change lane to avoid forever blocked by parking car
+        new_lane = self.change_lane_map[self.lane]
+        crash, _, _ = self.check_crash_white_car(new_lane)
+
+        if not crash:
+            self.lane = new_lane
+            self.x = LANE[self.lane]
+        self.try_speed_up()
+
     def handle_traffic_light(self):
 
         # get the traffic light
@@ -146,7 +183,7 @@ class WhiteCar:
             self.speed = 0
 
         # if not stop
-        if not red and self.speed == 0:
+        if not self.park and not red and self.speed == 0:
             self.try_speed_up()
 
 
@@ -161,3 +198,6 @@ class WhiteCar:
 
     def getSpeed(self):
         return self.speed
+
+    def getPark(self):
+        return self.park

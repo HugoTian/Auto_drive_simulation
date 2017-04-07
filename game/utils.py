@@ -85,6 +85,8 @@ def load():
     WHITE_LINE_PATH = 'Images/white_line.png'
     PEDES_RIGHT_PATH = 'Images/walk_right.png'
     PEDES_LEFT_PATH = 'Images/walk_left.png'
+    UP_PARKING_CAR_PATH = 'Images/up_parking_car.png'
+    DOWN_PARKING_CAR_PATH = 'Images/down_parking_car.png'
 
     IMAGES = {}
     IMAGES['road'] =  pygame.image.load(ROAD_PATH).convert()
@@ -98,6 +100,8 @@ def load():
     IMAGES['white_line'] = pygame.image.load(WHITE_LINE_PATH).convert()
     IMAGES['walk_left'] = pygame.image.load(PEDES_LEFT_PATH).convert()
     IMAGES['walk_right'] = pygame.image.load(PEDES_RIGHT_PATH).convert()
+    IMAGES['up_park_car'] = pygame.image.load(UP_PARKING_CAR_PATH).convert()
+    IMAGES['down_park_car'] = pygame.image.load(DOWN_PARKING_CAR_PATH).convert()
 
     IMAGES['numbers'] = (
         pygame.image.load('Images/0.png').convert_alpha(),

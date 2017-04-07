@@ -377,11 +377,17 @@ class GameState:
 
         for elem in self.white_cars:
             x,y = self.white_cars[elem].getXY()
+            p = self.white_cars[elem].getPark()
             if x <= LANE[1]:
-                SCREEN.blit(IMAGES['white_car_reverse'], (x,y))
+                if not p:
+                    SCREEN.blit(IMAGES['white_car_reverse'], (x,y))
+                else:
+                    SCREEN.blit(IMAGES['down_park_car'], (x,y))
             else:
-                SCREEN.blit(IMAGES['white_car'], (x,y))
-
+                if not p:
+                    SCREEN.blit(IMAGES['white_car'], (x,y))
+                else:
+                    SCREEN.blit(IMAGES['up_park_car'], (x,y))
         # draw traffic light
         self.draw_traffic_light()
 
