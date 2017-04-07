@@ -41,12 +41,13 @@ Where image is the current screen of simulator, reward is current reward, termin
 
 To train the model, need torch and pytorch installed, you may look reference [here](http://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html)
 
+The AI of the game is White car, they will avoid crash and speed up in a smart way. They may also park or restart from parking. When parking, the AI car becomes yellow. In the environment, there is also traffic light and pedestrian. Everyone should obey traffic light, and pedestrian can across the road at any time, any where. Every car should not hurt pedestrian.
+
 To Do 
-   1. Add people
-   2. Add park
-   3. Design reward system to make better player
-   4. Make simulator stable
-   5. Reduce library dependency
+   1. Add pedestrian
+   2. Design reward system to make better player
+   3. Make simulator stable
+   4. Reduce library dependency
    
    
 
