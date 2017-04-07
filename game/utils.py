@@ -19,19 +19,18 @@ LIGHT_INTERVAL = 100
 LIGHT1_POS = (50, 360)
 LIGHT2_POS = (500, 360)
 RED_STOP_UP = 460
-RED_STOP_DOWN = 340
+RED_STOP_DOWN = 300
 
 Car = namedtuple('Car', ('idx', 'speed', 'lane', 'y', 'upwards'))
 Pedestrain = namedtuple('Pedestrain', ('idx', 'speed', 'x', 'y', 'left'))
 TrafficLight = namedtuple('Traffic', ('x', 'y', 'red'))
-Parking = namedtuple('Parking', ('lane', 'y', 'available'))
 Reward = namedtuple('Reward', ('reward, terminal, lane, x, acc_delta, up'))
 
 
 class Environment:
     # the environment, the location and status of every object in screen
     # every object in screen has a Environment obejct as attribute
-    def __init__(self, lane_info, traffic_info, pedestrain, parking):
+    def __init__(self, lane_info, traffic_info, pedestrain):
         # lane_info : infomation of lane, dict like {0 : list(Car), 1 : list(Car)}
         # traffic_info : TrafficLight :  list(TrafficLight)
         # pedestrain : list(Pedestrain)
@@ -39,7 +38,6 @@ class Environment:
         self.lane_info = lane_info
         self.traffic_info = traffic_info
         self.pedestrain = pedestrain
-        self.parking_info = parking
 
     def get_cars(self, lane):
 
@@ -84,6 +82,9 @@ def load():
     PARKING_PATH = 'Images/parking.png'
     RED_TRIFFIC_LIGHT_PATH = 'Images/red.png'
     GREEN_TRAFFIC_LIGHT_PATH = 'Images/green.png'    
+    WHITE_LINE_PATH = 'Images/white_line.png'
+    PEDES_RIGHT_PATH = 'Images/walk_right.png'
+    PEDES_LEFT_PATH = 'Images/walk_left.png'
 
     IMAGES = {}
     IMAGES['road'] =  pygame.image.load(ROAD_PATH).convert()
@@ -94,7 +95,10 @@ def load():
     IMAGES['park'] = pygame.image.load(PARKING_PATH).convert()
     IMAGES['red_light'] = pygame.image.load(RED_TRIFFIC_LIGHT_PATH).convert()
     IMAGES['green_light'] = pygame.image.load(GREEN_TRAFFIC_LIGHT_PATH).convert()
-    
+    IMAGES['white_line'] = pygame.image.load(WHITE_LINE_PATH).convert()
+    IMAGES['walk_left'] = pygame.image.load(PEDES_LEFT_PATH).convert()
+    IMAGES['walk_right'] = pygame.image.load(PEDES_RIGHT_PATH).convert()
+
     IMAGES['numbers'] = (
         pygame.image.load('Images/0.png').convert_alpha(),
         pygame.image.load('Images/1.png').convert_alpha(),

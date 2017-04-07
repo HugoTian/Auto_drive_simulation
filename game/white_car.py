@@ -16,17 +16,19 @@ class WhiteCar:
         self.x = LANE[lane]
         self.speed = speed
         self.env = env
-
+        self.parking = False
         self.up_dict = {True: {
                                 'speed': -1,
                                 'light': 1,
-                                'stop': RED_STOP_UP
+                                'stop': RED_STOP_UP,
+                                'park':3
 
                               },
                        False: {
                                 'speed': 1,
                                 'light': 0,
-                                'stop': RED_STOP_DOWN
+                                'stop': RED_STOP_DOWN,
+                                'park':0
                                }
                        }
 
@@ -63,6 +65,10 @@ class WhiteCar:
             # debug print(self.key, self.lane, self.speed, crashed_car.speed, crashed_car.lane , crashed_car.idx)
 
         return removed, self.key
+
+    def park_or_not(self):
+        # decide whether to park
+        pass
 
     def handle_crash(self, crashed_car):
         # if there is a possible crash, need to handle that
@@ -125,6 +131,9 @@ class WhiteCar:
             self.speed = old_speed
         self.y = old_y
 
+    def try_change_lane(self):
+        # try change lane and speed up
+        pass
     def handle_traffic_light(self):
 
         # get the traffic light

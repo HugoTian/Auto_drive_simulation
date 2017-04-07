@@ -105,7 +105,7 @@ class GameState:
         self.car_maps = {0:[], 1:[], 2:[],3:[]} # key is lane, and value is (key,y, speed) pair
         self.car_maps[self.lane].append(Car(self.max_white_car, self.playerVelY, self.lane, self.playery, self.up))
 
-        self.env = Environment(self.car_maps, [self.light_down, self.light_up], None, None)
+        self.env = Environment(self.car_maps, [self.light_down, self.light_up], None)
         self.init_white_car()
 
     def add_one_car(self, i, begin=False):
@@ -276,7 +276,7 @@ class GameState:
         terminal = False
         for elem in self.white_cars:
             x,y = self.white_cars[elem].getXY()
-            if check_collision(self.playerx, self.playery, x, y):
+            if check_collision(self.playerx, self.playery, x, y, extra=10):
                 terminal = True
                 break
 
@@ -369,7 +369,10 @@ class GameState:
         SCREEN.blit(IMAGES['road'], (self.basex, 0))
 
         # stop line
+        SCREEN.blit(IMAGES['white_line'], (142,RED_STOP_DOWN+60))
+        SCREEN.blit(IMAGES['white_line'], (310, RED_STOP_UP))
 
+        # red car
         SCREEN.blit(IMAGES['red_car'], (self.playerx, self.playery))
 
         for elem in self.white_cars:
@@ -414,12 +417,12 @@ def showScore(score):
         Xoffset += IMAGES['numbers'][digit].get_width()
 
 
-def check_collision(x1, y1, x2, y2):
+def check_collision(x1, y1, x2, y2, extra=20):
     # check whther 2 car collide with each other
     if x1 != x2:
         return False
 
-    if abs(y1-y2) <= (20 + RED_CAR_HEIGHT):
+    if abs(y1-y2) <= (extra + RED_CAR_HEIGHT):
         return True
     else:
         return False
