@@ -29,7 +29,7 @@ GAME = 'Deep Traffic' # the name of the game being played for log files
 ACTIONS = 5 # number of valid actions
 
 #  For training the model
-BATCH_SIZE = 32
+BATCH_SIZE = 128
 GAMMA = 0.999
 # region of interest, crop screen to find ROI
 ROI_WIDTH = 200
@@ -38,7 +38,7 @@ CONV_SIZE = 80
 
 # learning parameter
 EPS_START = 0.9
-EPS_END = 0.05
+EPS_END = 0.02
 EPS_DECAY = 200
 
 try:
@@ -131,8 +131,8 @@ def get_roi(x, y):
     # hard code
     # need change when cars can go down
     y_min = max(0 , y - 100)
-    y_max = min(SCREENHEIGHT, y + 100)
-    screen = screen[300:500, y_min:y_max]
+    y_max = min(SCREENHEIGHT, y + 120)
+    screen = screen[300:550, y_min:y_max]
     screen = cv2.resize(screen,(80,80), interpolation = cv2.INTER_AREA)
     screen = screen.transpose((2, 0, 1))  # transpose into torch order (CHW)
 
@@ -214,10 +214,10 @@ def train_model(path='model'):
     s = game.GameState()
     do_nothing = 0
 
-    image_data, reward, terminate, (x, y) = s.frame_step(do_nothing)
+    image_data, reward, terminate, (x, y) , _ = s.frame_step(do_nothing)
     index = time.time()
     cur_time = time.time()
-    while cur_time - index < 900:
+    while cur_time - index < 1200:
         last_screen = get_roi(x, y)
         current_screen = get_roi(x, y)
         
@@ -226,7 +226,7 @@ def train_model(path='model'):
             # Select and perform an action
             action = select_action(state)
 
-            _, reward, done, (x, y) = s.frame_step(action[0][0])
+            _, reward, done, (x, y), _ = s.frame_step(action[0][0])
 
             reward = torch.Tensor([reward])
 
@@ -252,7 +252,7 @@ def train_model(path='model'):
             if done:
                 break
 
-    cur_time = time.time()
+    	cur_time = time.time()
 
     with open(path, 'w') as f:
         torch.save(model.state_dict(), f)
@@ -280,22 +280,31 @@ def load_model(path):
         trained_model.cuda()
 
     s = game.GameState()
-    image_data , reward , terminate , (x, y) = s.frame_step(0)
+    image_data , reward , terminate , (x, y), _ = s.frame_step(0)
 
     last_screen = get_roi(x,y)
     start = time.time()
-
+    total_reward = 0
+    speed = 0
+    frames = 0
     while not terminate:
         current_screen = get_roi(x,y)
         state = current_screen - last_screen
+        
         # Select and perform an action
         action = trained_model(Variable(state)).data.max(1)[1].cpu()
-        _, reward, terminate, (x,y) = s.frame_step(action[0][0])
+        _, reward, terminate, (x,y) , v = s.frame_step(action[0][0])
+        
         last_screen = current_screen
+        speed += v
+        frames += 1
+        total_reward += reward
 
     cur_time = time.time()
+    
     print('The game last for {} seconds'.format(cur_time-start))
-
+    print('The game last for {} frames'.format(frames))
+    print('The average speed is {}'.format(speed/frames))
 
 if __name__ == "__main__":
     if sys.argv[1] == 'train':

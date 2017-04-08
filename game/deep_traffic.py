@@ -1,6 +1,7 @@
 import random
 from .utils import *
 from .white_car import WhiteCar
+from copy import deepcopy
 
 pygame.init()
 FPSCLOCK = pygame.time.Clock()
@@ -83,7 +84,7 @@ class GameState:
         self.pipeVelX = 0
         self.playerVelY = 1    
         self.playerAccY = 0  
-        self.playerMaxV = 10
+        self.playerMaxV = 6
         self.up = True
 
         # road 
@@ -108,6 +109,10 @@ class GameState:
         self.env = Environment(self.car_maps, [self.light_down, self.light_up], None)
         self.init_white_car()
 
+        # for calculate reward
+        self.old_env = deepcopy(self.env)
+        self.old_y = self.playery
+
     def add_one_car(self, i, begin=False):
         # add one car to the environment
         # i : id of the car
@@ -130,7 +135,7 @@ class GameState:
         initial_collision = True
         while initial_collision :
             if self.car_maps[lane]:
-                initial_collision = any( check_collision(lane, y, lane, car.y) for car in self.car_maps[lane])
+                initial_collision = any( check_collision(lane, y, lane, car.y, extra=40) for car in self.car_maps[lane])
                 if initial_collision:
                     if begin: # if its begin state then just abort
                         return None 
@@ -180,7 +185,7 @@ class GameState:
         reward_info = reward_scheme[self.up][self.lane][actions]
         reward, terminal,  = reward_info.reward, reward_info.terminal
         self.lane, self.playerx  = reward_info.lane, reward_info.x
-        self.playerAccY, self.up = self.playerAccY + reward_info.acc_delta, reward_info.up
+        self.playerAccY, self.up = reward_info.acc_delta, reward_info.up
  
         # summary
 
@@ -322,6 +327,31 @@ class GameState:
         for elem in self.white_cars:
             self.white_cars[elem].update_env(self.env)
 
+    def calculate_passed_car(self):
+        # calculate 
+        calculate_map = {
+            True: {2 : 3, 3 : 2},
+            False: {0 : 1, 1: 0}
+        }
+        behind = set()
+        front = set()
+        
+        check_lane = calculate_map[self.up][self.lane]
+        for cars in self.old_env.get_cars(check_lane):
+            if self.old_y > cars.y:
+                front.add(cars.idx)
+        for cars in self.env.get_cars(check_lane):
+            if self.playery < cars.y:
+                behind.add(cars.idx)
+        
+        self.old_y = self.playery
+        self.old_env = deepcopy(self.env)
+
+        return len(behind & front)
+            
+
+
+
     def frame_step(self, input_actions):
         # update frame number 
         self.num_frame += 1
@@ -362,7 +392,8 @@ class GameState:
             # make sure reward is -1
             reward = -1
             self.__init__()
-
+        else:
+            reward = self.calculate_passed_car() * 10 + self.playerVelY
         # draw 
         SCREEN.blit(IMAGES['background'], (0,0))
 
@@ -392,8 +423,8 @@ class GameState:
         self.draw_traffic_light()
 
         # encouge speed up
-        if not terminal and self.playerVelY == 0:
-            reward = -0.5
+        # if not terminal and self.playerVelY == 0:
+        #    reward = -0.5
         
         # update score
         if reward >= 0:
@@ -405,7 +436,7 @@ class GameState:
         pygame.display.update()
         FPSCLOCK.tick(FPS)
         
-        return image_data, reward, terminal, (self.playerx, self.playery)
+        return image_data, reward, terminal, (self.playerx, self.playery), self.playerVelY
 
 
 def showScore(score):
