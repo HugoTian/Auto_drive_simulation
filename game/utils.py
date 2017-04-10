@@ -21,6 +21,7 @@ LIGHT1_POS = (50, 360)
 LIGHT2_POS = (500, 360)
 RED_STOP_UP = 460
 RED_STOP_DOWN = 300
+YELLOW_TIME = 20
 
 # pedes constant
 PEDES_LEFT = 110
@@ -82,13 +83,15 @@ class Environment:
 def load():
 
     RED_CAR_PATH = 'Images/red_car.png'
+    RED_CAR_DOWN_PATH = 'Images/red_car_down.png'
     WHITE_CAR_PATH = 'Images/white_car.png'
     WHITE_CAR_REVERSE_PATH = 'Images/white_car_reverse.png'
     ROAD_PATH = 'Images/road.png'
     BACKGROUND_PATH = 'Images/background-black.png'
     PARKING_PATH = 'Images/parking.png'
     RED_TRIFFIC_LIGHT_PATH = 'Images/red.png'
-    GREEN_TRAFFIC_LIGHT_PATH = 'Images/green.png'    
+    GREEN_TRAFFIC_LIGHT_PATH = 'Images/green.png'
+    YELLOW_TRAFFIC_LIGHT_PATH = 'Images/yellow.png'
     WHITE_LINE_PATH = 'Images/white_line.png'
     PEDES_RIGHT_PATH = 'Images/walk_right.png'
     PEDES_LEFT_PATH = 'Images/walk_left.png'
@@ -104,11 +107,13 @@ def load():
     IMAGES['park'] = pygame.image.load(PARKING_PATH).convert()
     IMAGES['red_light'] = pygame.image.load(RED_TRIFFIC_LIGHT_PATH).convert()
     IMAGES['green_light'] = pygame.image.load(GREEN_TRAFFIC_LIGHT_PATH).convert()
+    IMAGES['yellow_light'] = pygame.image.load(YELLOW_TRAFFIC_LIGHT_PATH).convert()
     IMAGES['white_line'] = pygame.image.load(WHITE_LINE_PATH).convert()
     IMAGES['walk_left'] = pygame.image.load(PEDES_LEFT_PATH).convert()
     IMAGES['walk_right'] = pygame.image.load(PEDES_RIGHT_PATH).convert()
     IMAGES['up_park_car'] = pygame.image.load(UP_PARKING_CAR_PATH).convert()
     IMAGES['down_park_car'] = pygame.image.load(DOWN_PARKING_CAR_PATH).convert()
+    IMAGES['red_car_down'] = pygame.image.load(RED_CAR_DOWN_PATH).convert()
 
     IMAGES['numbers'] = (
         pygame.image.load('Images/0.png').convert_alpha(),

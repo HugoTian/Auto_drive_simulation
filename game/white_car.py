@@ -75,8 +75,7 @@ class WhiteCar:
             # debug print(self.key, self.lane, self.speed, crashed_car.speed, crashed_car.lane , crashed_car.idx)
         elif not self.park and not self.wait_for_pedes and not self.wait_for_light:
             # make it fun
-            if random.randint(0, 1) == 0:
-                self.try_speed_up()
+            self.try_speed_up()
 
         # try change lane when in green light, avoid forever blocking by parked car or pedestrian
         if not self.wait_for_light and not self.park and not self.wait_for_pedes and self.speed == 0 and not self.env.get_traffic()[self.up_dict[self.up]['light']].red:

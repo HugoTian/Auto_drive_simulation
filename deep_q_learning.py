@@ -214,7 +214,7 @@ def train_model(path='model'):
     s = game.GameState()
     do_nothing = 0
 
-    image_data, reward, terminate, (x, y) , _ = s.frame_step(do_nothing)
+    image_data, reward, terminate, (x, y), _ , _, _= s.frame_step(do_nothing)
     index = time.time()
     cur_time = time.time()
     while cur_time - index < 1200:

@@ -75,18 +75,23 @@ class GameState:
 
         self.score = 0  
         self.num_frame = 0
-        # player
-        self.playerx = LANE[2]
-        self.playery = SCREENHEIGHT - RED_CAR_HEIGHT
-        self.lane = 2
 
-        # player velocity, 
+        # player settings
         self.pipeVelX = 0
         self.playerVelY = 1    
         self.playerAccY = 0  
         self.playerMaxV = 6
-        self.up = True
+        if random.randint(0, 1) == 0:
+            self.up = True
+            self.playery = SCREENHEIGHT - RED_CAR_HEIGHT
+            self.playerx = LANE[2]
 
+            self.lane = 2
+        else:
+            self.playerx = LANE[1]
+            self.lane = 1
+            self.up = False
+            self.playery = 0
         # road 
         self.basex = BASE_SHIFT 
         
@@ -98,7 +103,8 @@ class GameState:
         self.light_up = TrafficLight(LIGHT2_POS[0], LIGHT2_POS[1], False)
         self.green_starts1 = 0
         self.green_starts2 = 0
-
+        self.yellow_starts1 = 0
+        self.yellow_starts2 = 0
 
         # white car
         self.max_white_car = 7
@@ -223,9 +229,15 @@ class GameState:
         if self.playerVelY > self.playerMaxV:
             self.playerVelY = self.playerMaxV
 
-        self.playery -= self.playerVelY
-        
+        if self.up:
+            self.playery -= self.playerVelY
+        else:
+            self.playery += self.playerVelY
+
         if self.playery < 0 and self.up :
+            self.circle = True
+
+        if self.playery > SCREENHEIGHT - 60 and not self.up:
             self.circle = True
 
         # A hack, try to encourage speed up
@@ -293,13 +305,25 @@ class GameState:
     def draw_traffic_light(self):
 
         if self.light_down.red:
-            SCREEN.blit(IMAGES['red_light'], LIGHT1_POS)
+            if self.yellow_starts1 < YELLOW_TIME:
+                self.yellow_starts1 += 1
+                SCREEN.blit(IMAGES['yellow_light'], LIGHT1_POS)
+            else:
+
+                SCREEN.blit(IMAGES['red_light'], LIGHT1_POS)
         else:
+            self.yellow_starts1 = 0
             SCREEN.blit(IMAGES['green_light'], LIGHT1_POS)
 
         if self.light_up.red:
-            SCREEN.blit(IMAGES['red_light'], LIGHT2_POS)
+            if self.yellow_starts2  < YELLOW_TIME:
+                self.yellow_starts2 += 1
+                SCREEN.blit(IMAGES['yellow_light'], LIGHT2_POS)
+            else:
+
+                SCREEN.blit(IMAGES['red_light'], LIGHT2_POS)
         else:
+            self.yellow_starts2 = 0
             SCREEN.blit(IMAGES['green_light'], LIGHT2_POS)
 
     def update_pedestrian(self):
@@ -468,7 +492,13 @@ class GameState:
 
         # get entire new screen
         if self.circle:
-            self.playery = SCREENHEIGHT - RED_CAR_HEIGHT
+            if random.randint(0, 1) == 0:
+                self.up = True
+                self.playery = SCREENHEIGHT - RED_CAR_HEIGHT
+            else:
+                self.up = False
+                self.playery = 0
+
             self.circle = False
             self.init_white_car()
 
@@ -493,7 +523,10 @@ class GameState:
         SCREEN.blit(IMAGES['white_line'], (310, RED_STOP_UP))
 
         # red car
-        SCREEN.blit(IMAGES['red_car'], (self.playerx, self.playery))
+        if self.up:
+            SCREEN.blit(IMAGES['red_car'], (self.playerx, self.playery))
+        else:
+            SCREEN.blit(IMAGES['red_car_down'], (self.playerx, self.playery))
 
         for elem in self.white_cars:
             x,y = self.white_cars[elem].getXY()
