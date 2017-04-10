@@ -266,7 +266,7 @@ def test_simulator(t_max):
         action = random.randint(0,3)
         if random.randint(0, 20) == 0:
             action = 4
-        image_data , reward , terminate , (x, y) = s.frame_step(0)
+        image_data , reward , terminate , (x, y), _  = s.frame_step(0)
         
         t += 1
 

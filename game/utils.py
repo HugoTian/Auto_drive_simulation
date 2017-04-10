@@ -1,4 +1,5 @@
 import pygame
+import random
 from collections import namedtuple
 
 FPS = 30
@@ -21,8 +22,12 @@ LIGHT2_POS = (500, 360)
 RED_STOP_UP = 460
 RED_STOP_DOWN = 300
 
+# pedes constant
+PEDES_LEFT = 110
+PEDES_RIGHT = 480
+
 Car = namedtuple('Car', ('idx', 'speed', 'lane', 'y', 'upwards'))
-Pedestrain = namedtuple('Pedestrain', ('idx', 'speed', 'x', 'y', 'left'))
+Pedestrain = namedtuple('Pedestrain', ('speed', 'x', 'y', 'left'))
 TrafficLight = namedtuple('Traffic', ('x', 'y', 'red'))
 Reward = namedtuple('Reward', ('reward, terminal, lane, x, acc_delta, up'))
 
@@ -44,7 +49,7 @@ class Environment:
         # get cars in lane 
         return self.lane_info[lane]
 
-    def get_pedestrain(self):
+    def get_pedestrian(self):
 
         # get list of pedestrain
         return self.pedestrain
@@ -116,6 +121,34 @@ def load():
         pygame.image.load('Images/9.png').convert_alpha())
 
     return IMAGES
+
+
+def find_space(car_map):
+
+    # find place where pedestrian can go
+    res = []
+    l = []
+    for lane in car_map:
+        cars = car_map[lane]
+        for car in cars:
+            l.append(car.y)
+
+    l = sorted(l)
+
+    if len(l) == 1:
+        return l[0] + 67
+
+    for i, v in enumerate(l):
+        if i != len(l)-1:
+            if l[i+1] - v > 120 :
+                if v+67 < SCREENHEIGHT - 50:
+                    res.append(v+ 67)
+    if len(res) >= 2:
+        index = random.randint(0, len(res)-1)
+        return res[index]
+    elif len(res) ==1:
+        return  res[0]
+
 
 
 

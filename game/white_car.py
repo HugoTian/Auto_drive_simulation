@@ -16,9 +16,12 @@ class WhiteCar:
         self.x = LANE[lane]
         self.speed = speed
         self.env = env
+
         self.park = False
         self.park_time = 0
         self.park_random = random.randint(200,400)
+
+        self.wait_for_pedes = False
 
         self.change_lane_map = {0:1, 1:0, 2:3, 3:2} # possible ways to change lane
         self.up_dict = {True: {
@@ -32,7 +35,7 @@ class WhiteCar:
                                 'speed': 1,
                                 'light': 0,
                                 'stop': RED_STOP_DOWN,
-                                'park':0
+                                'park': 0
                                }
                        }
 
@@ -60,19 +63,22 @@ class WhiteCar:
         # handle traffic
         self.handle_traffic_light()
 
+        # handle pedestrian
+        self.handle_pedestrian()
+
         # handle crash
         crash, crashed_car, back = self.check_crash_white_car(self.lane)
 
         if crash and back:
             self.handle_crash(crashed_car)
             # debug print(self.key, self.lane, self.speed, crashed_car.speed, crashed_car.lane , crashed_car.idx)
-        elif not self.park:
+        elif not self.park and not self.wait_for_pedes:
             # make it fun
             if random.randint(0, 5) == 0:
                 self.try_speed_up()
 
         # try change lane when in green light, avoid forever blocking by parked car
-        if not self.park and self.speed == 0 and not self.env.get_traffic()[self.up_dict[self.up]['light']].red:
+        if not self.park and not self.wait_for_pedes and self.speed == 0 and not self.env.get_traffic()[self.up_dict[self.up]['light']].red:
             self.try_change_lane()
         
         # park ?
@@ -109,6 +115,34 @@ class WhiteCar:
             self.x = LANE[self.lane]
         else:
             self.speed = crashed_car.speed
+
+    def hit_pedes(self):
+
+        hit = False
+        people = self.env.get_pedestrian()
+        if not people:
+            return hit
+
+        x1, y1 = people.x , people.y
+
+        if self.up:
+            if x1 < PEDES_RIGHT and x1 > PEDES_LEFT and abs(self.y - y1) < 65:
+                hit = True
+        else:
+            if x1 < PEDES_RIGHT and x1 > PEDES_LEFT and abs(self.y - y1) < 65:
+                hit = True
+
+        return hit
+
+    def handle_pedestrian(self):
+        # handle pedestrian
+
+        if self.hit_pedes():
+            self.wait_for_pedes = True
+            self.speed = 0
+        else:
+            self.wait_for_pedes = False
+
 
     def get_cars_in_lane(self, lane):
         # get all the cars in lane except for myself
@@ -157,7 +191,10 @@ class WhiteCar:
         self.y += self.up_dict[self.up]['speed']
 
         crash, _, _ = self.check_crash_white_car(self.lane)
-        if crash:
+
+        hit = self.hit_pedes()
+
+        if crash or hit:
             self.speed = old_speed
         self.y = old_y
 
@@ -178,9 +215,14 @@ class WhiteCar:
         red = traffic_light[self.up_dict[self.up]['light']].red
 
         # stop
-        if red and abs(self.y - self.up_dict[self.up]['stop']) < 5:
-            self.y = self.up_dict[self.up]['stop']
-            self.speed = 0
+        if red:
+            if self.up and self.y - self.up_dict[self.up]['stop'] < 5:
+                self.y = self.up_dict[self.up]['stop']
+                self.speed = 0
+
+            if not self.up and self.up_dict[self.up]['stop'] - self.y < 5:
+                self.y = self.up_dict[self.up]['stop']
+                self.speed = 0
 
         # if not stop
         if not self.park and not red and self.speed == 0:

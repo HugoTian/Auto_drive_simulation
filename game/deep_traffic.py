@@ -98,6 +98,8 @@ class GameState:
         self.light_up = TrafficLight(LIGHT2_POS[0], LIGHT2_POS[1], False)
         self.green_starts1 = 0
         self.green_starts2 = 0
+
+
         # white car
         self.max_white_car = 7
         self.white_cars = {} # key is idx, and value is white car object
@@ -106,12 +108,34 @@ class GameState:
         self.car_maps = {0:[], 1:[], 2:[],3:[]} # key is lane, and value is (key,y, speed) pair
         self.car_maps[self.lane].append(Car(self.max_white_car, self.playerVelY, self.lane, self.playery, self.up))
 
+
         self.env = Environment(self.car_maps, [self.light_down, self.light_up], None)
         self.init_white_car()
+
+        # initialize clever pedestrian
+        self.walk_pedes = None
+        self.init_pedes()
 
         # for calculate reward
         self.old_env = deepcopy(self.env)
         self.old_y = self.playery
+
+    def init_pedes(self):
+        # init pedestrian
+
+        if random.randint(0,5) != 0:
+            return
+
+        res = find_space(self.car_maps)
+        if res:
+            if random.randint(0,1) == 0: # left
+                self.walk_pedes = Pedestrain(3, PEDES_RIGHT, res, True)
+            else:
+                self.walk_pedes = Pedestrain(3, PEDES_LEFT, res, False)
+        else:
+            self.walk_pedes = None
+
+        self.env.set_pedestrain_info(self.walk_pedes)
 
     def add_one_car(self, i, begin=False):
         # add one car to the environment
@@ -126,7 +150,7 @@ class GameState:
 
         # begin : whether the car should appear at border
         if begin:
-            if lane in (0,1):
+            if lane in (0, 1):
                 y = 0
             else:
                 y = SCREENHEIGHT
@@ -263,6 +287,7 @@ class GameState:
         for elem in self.white_cars:
             self.white_cars[elem].update_env(self.env)
 
+
     def draw_traffic_light(self):
 
         if self.light_down.red:
@@ -274,6 +299,49 @@ class GameState:
             SCREEN.blit(IMAGES['red_light'], LIGHT2_POS)
         else:
             SCREEN.blit(IMAGES['green_light'], LIGHT2_POS)
+
+    def update_pedestrian(self):
+
+        if not self.walk_pedes:
+            self.init_pedes()
+            return
+
+        if self.walk_pedes.left:
+            # left walk pedestrian
+            new_x  = self.walk_pedes.x - self.walk_pedes.speed
+            if new_x < PEDES_LEFT:
+                self.walk_pedes = None
+                self.init_pedes()
+            else:
+                self.walk_pedes = Pedestrain(3, new_x, self.walk_pedes.y, True)
+
+        else:# right walk pedestrian
+            new_x_2 = self.walk_pedes.x + self.walk_pedes.speed
+
+            if new_x_2 > PEDES_RIGHT:
+                self.walk_pedes = None
+                self.init_pedes()
+            else:
+                self.walk_pedes = Pedestrain(3,new_x_2, self.walk_pedes.y, False)
+
+
+        self.env.set_pedestrain_info(self.walk_pedes)
+
+        for elem in self.white_cars:
+            self.white_cars[elem].update_env(self.env)
+
+    def draw_pedestrian(self):
+
+        if not self.walk_pedes:
+            return
+
+        if self.walk_pedes.left:
+            x, y = self.walk_pedes.x, self.walk_pedes.y
+            SCREEN.blit(IMAGES['walk_left'], (x, y))
+        else:
+            x2, y2 = self.walk_pedes.x, self.walk_pedes.y
+            SCREEN.blit(IMAGES['walk_right'], (x2, y2))
+
 
     def check_crash(self):
         # check crash with white car
@@ -306,6 +374,20 @@ class GameState:
                     if self.playerVelY != 0:
                         terminal = True
         return terminal
+
+    def check_hit_pedestrian(self):
+
+        terminate = False
+        if not self.walk_pedes:
+            return
+
+        x1, y1 = self.walk_pedes.x, self.walk_pedes.y
+
+
+        if abs(x1 - self.playerx) < 40 and abs(y1 - self.playery) < 60:
+            terminate = True
+
+        return terminate
 
     def update_global_env(self):
          # reform global car map
@@ -348,8 +430,6 @@ class GameState:
         self.old_env = deepcopy(self.env)
 
         return len(behind & front)
-            
-
 
 
     def frame_step(self, input_actions):
@@ -365,6 +445,9 @@ class GameState:
         # traffic light
         self.update_traffic_light()
 
+        # update_pedestrian
+        self.update_pedestrian()
+
         # update white car
         self.update_white_car()
 
@@ -377,6 +460,10 @@ class GameState:
         # check whether obey traffic light
         terminal3 = self.check_obey_traffic()
 
+        # check whether hit perestrian
+
+        terminal4 = self.check_hit_pedestrian()
+
         # get entire new screen
         if self.circle:
             self.playery = SCREENHEIGHT - RED_CAR_HEIGHT
@@ -386,7 +473,7 @@ class GameState:
         # update global env for every object on screen
         self.update_global_env()
 
-        terminal = terminal1 or terminal2 or terminal3
+        terminal = terminal1 or terminal2 or terminal3 or terminal4
         # handle termianl case
         if terminal:
             # make sure reward is -1
@@ -421,6 +508,9 @@ class GameState:
                     SCREEN.blit(IMAGES['up_park_car'], (x,y))
         # draw traffic light
         self.draw_traffic_light()
+
+        # draw pedestrian()
+        self.draw_pedestrian()
 
         # encouge speed up
         # if not terminal and self.playerVelY == 0:
