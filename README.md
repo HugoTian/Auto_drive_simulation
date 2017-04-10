@@ -4,7 +4,7 @@ To get required python packages on MacOS
 
     pip install -r requirements.txt
 
-If you use other platform or the above command fails, basically you need to install pygame, pytorch, torchvision, opencv to train the network, please refer to [here](http://pytorch.org/) to install pytorch and torchvision.
+If you use other platform or the above command fails, basically you need to install pygame,numpy for this simulation. And if you want ot use deep q learning in deep_q_learning.py, please install pytorch, torchvision, opencv to train the network, please refer to [here](http://pytorch.org/) to install pytorch and torchvision.
 
 
 To run the simulation
