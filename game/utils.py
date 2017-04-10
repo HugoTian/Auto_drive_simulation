@@ -25,6 +25,8 @@ RED_STOP_DOWN = 300
 # pedes constant
 PEDES_LEFT = 110
 PEDES_RIGHT = 480
+PEDES_MID = 305
+RED_LIGHT_THRESHOLD = 6
 
 Car = namedtuple('Car', ('idx', 'speed', 'lane', 'y', 'upwards'))
 Pedestrain = namedtuple('Pedestrain', ('speed', 'x', 'y', 'left'))
@@ -147,7 +149,7 @@ def find_space(car_map):
         index = random.randint(0, len(res)-1)
         return res[index]
     elif len(res) ==1:
-        return  res[0]
+        return res[0]
 
 
 

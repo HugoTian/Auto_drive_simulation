@@ -123,7 +123,9 @@ class GameState:
     def init_pedes(self):
         # init pedestrian
 
-        if random.randint(0,5) != 0:
+        if random.randint(0, 10) != 0:
+            self.walk_pedes = None
+            self.env.set_pedestrain_info(self.walk_pedes)
             return
 
         res = find_space(self.car_maps)
@@ -322,7 +324,7 @@ class GameState:
                 self.walk_pedes = None
                 self.init_pedes()
             else:
-                self.walk_pedes = Pedestrain(3,new_x_2, self.walk_pedes.y, False)
+                self.walk_pedes = Pedestrain(3, new_x_2, self.walk_pedes.y, False)
 
 
         self.env.set_pedestrain_info(self.walk_pedes)
@@ -525,9 +527,11 @@ class GameState:
         image_data = pygame.surfarray.array3d(pygame.display.get_surface())
         pygame.display.update()
         FPSCLOCK.tick(FPS)
-        
-        return image_data, reward, terminal, (self.playerx, self.playery), self.playerVelY
 
+        if self.up:
+            return image_data, reward, terminal, (self.playerx, self.playery), self.up, self.light_up.red , self.playerVelY
+        else:
+            return image_data, reward, terminal, (self.playerx, self.playery), self.up, self.light_down.red, self.playerVelY
 
 def showScore(score):
     """displays score in screen"""

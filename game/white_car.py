@@ -22,6 +22,7 @@ class WhiteCar:
         self.park_random = random.randint(200,400)
 
         self.wait_for_pedes = False
+        self.wait_for_light = False
 
         self.change_lane_map = {0:1, 1:0, 2:3, 3:2} # possible ways to change lane
         self.up_dict = {True: {
@@ -72,13 +73,13 @@ class WhiteCar:
         if crash and back:
             self.handle_crash(crashed_car)
             # debug print(self.key, self.lane, self.speed, crashed_car.speed, crashed_car.lane , crashed_car.idx)
-        elif not self.park and not self.wait_for_pedes:
+        elif not self.park and not self.wait_for_pedes and not self.wait_for_light:
             # make it fun
-            if random.randint(0, 5) == 0:
+            if random.randint(0, 1) == 0:
                 self.try_speed_up()
 
-        # try change lane when in green light, avoid forever blocking by parked car
-        if not self.park and not self.wait_for_pedes and self.speed == 0 and not self.env.get_traffic()[self.up_dict[self.up]['light']].red:
+        # try change lane when in green light, avoid forever blocking by parked car or pedestrian
+        if not self.wait_for_light and not self.park and not self.wait_for_pedes and self.speed == 0 and not self.env.get_traffic()[self.up_dict[self.up]['light']].red:
             self.try_change_lane()
         
         # park ?
@@ -126,11 +127,19 @@ class WhiteCar:
         x1, y1 = people.x , people.y
 
         if self.up:
-            if x1 < PEDES_RIGHT and x1 > PEDES_LEFT and abs(self.y - y1) < 65:
-                hit = True
+            if people.left:
+                if x1 < PEDES_RIGHT and x1 > PEDES_MID and self.y > y1 and self.y - y1 < 65:
+                    hit = True
+            else:
+                if x1 < PEDES_RIGHT and x1 > PEDES_LEFT and self.y > y1 and self.y - y1 < 65:
+                    hit = True
         else:
-            if x1 < PEDES_RIGHT and x1 > PEDES_LEFT and abs(self.y - y1) < 65:
-                hit = True
+            if people.left:
+                if x1 < PEDES_RIGHT and x1 > PEDES_LEFT and self.y < y1 and y1 - self.y < 70:
+                    hit = True
+            else:
+                if x1 < PEDES_MID and x1 > PEDES_LEFT and self.y < y1 and y1 - self.y < 70:
+                    hit = True
 
         return hit
 
@@ -216,13 +225,21 @@ class WhiteCar:
 
         # stop
         if red:
-            if self.up and self.y - self.up_dict[self.up]['stop'] < 5:
-                self.y = self.up_dict[self.up]['stop']
+            if self.up and self.y >= self.up_dict[self.up]['stop'] and self.y - self.up_dict[self.up]['stop'] < RED_LIGHT_THRESHOLD:
+                self.y = self.up_dict[self.up]['stop'] + 1
                 self.speed = 0
+                self.wait_for_light = True
+            else:
+                self.wait_for_light = False
 
-            if not self.up and self.up_dict[self.up]['stop'] - self.y < 5:
-                self.y = self.up_dict[self.up]['stop']
+            if not self.up and self.y <= self.up_dict[self.up]['stop'] and self.up_dict[self.up]['stop'] - self.y < RED_LIGHT_THRESHOLD:
+                self.y = self.up_dict[self.up]['stop'] - 1
                 self.speed = 0
+                self.wait_for_light = True
+            else:
+                self.wait_for_light = False
+        else:
+            self.wait_for_light = False
 
         # if not stop
         if not self.park and not red and self.speed == 0:

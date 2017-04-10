@@ -4,69 +4,119 @@ from __future__ import print_function
 import sys
 import math
 import game.deep_traffic as game
+
 from itertools import count
+from game.utils import  *
+
 import numpy as np
-from game.utils import *
 import time
 import random
-
-try:
-    import cv2
-    from PIL import Image
-    # need to install torch
-    import torch
-    import torch.nn as nn
-    import torch.optim as optim
-    import torch.autograd as autograd
-    import torch.nn.functional as F
-    import torchvision.transforms as T
-except:
-    if sys.argv[1] != 'test':
-        raise Exception('Need have torch, PIL, opencv2 to train the model and play game')
 
 # game constant
 GAME = 'Deep Traffic' # the name of the game being played for log files
 ACTIONS = 5 # number of valid actions
 
 #  For training the model
-BATCH_SIZE = 128
+BATCH_SIZE = 1
 GAMMA = 0.999
 # region of interest, crop screen to find ROI
 ROI_WIDTH = 200
 ROI_HEIGHT = 100
-CONV_SIZE = 80
+
 
 # learning parameter
 EPS_START = 0.9
 EPS_END = 0.02
 EPS_DECAY = 200
 
-try:
-    USE_CUDA = torch.cuda.is_available()
-except:
-    USE_CUDA = False
+# game
+s = game.GameState()
 
 # named tuple to record state transitions
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward', 'terminate'))
 
-# use pytorch build in model to convert image to CONV_SIZE  * CONV_SIZE
-try:
-    resize = T.Compose([T.ToPILImage(),
-                    T.Scale(CONV_SIZE, interpolation=Image.CUBIC),
-                    T.ToTensor()])
-except:
-    pass
+State = namedtuple('State', ('left', 'right', 'front'))
 
 
-def Variable(data, *args, **kwargs):
- 
-    # torch variable class
-    
-    if USE_CUDA:
-    	return autograd.Variable(data, *args, **kwargs).cuda()
+state_table = {
+
+    'left': {
+        150: (240, 280, 60),
+        240: (None, None, None),
+        330: (None, None, None),
+        400: (330, 370, 60)
+    },
+    'right': {
+        150: (None, None, None),
+        240: (150, 190, 60),
+        330: (400, 440, 60),
+        400: (None, None, None)
+    },
+    'front': {
+        150: (150, 190, 120),
+        240: (240, 280, 120),
+        330: (330, 370, -120),
+        400: (400, 440, -120)
+    }
+
+}
+
+
+def check_state(target, img, x, y, up, red):
+    #check state
+
+    x1, x2, y_delta = state_table[target][x]
+
+    if not x1 :
+        return 1
+    y_up = min(y+y_delta, SCREENHEIGHT)
+    y_up = max(0, y_up)
+
+    if y_up>y:
+        roi = np.array(img[x1:x2, y:y_up])
     else:
-    	return autograd.Variable(data, *args, **kwargs)    
+        roi = np.array(img[x1:x2, y_up:y])
+
+    overall = roi.sum()
+
+    #left and  right case
+    if target != 'front':
+        if overall == 0:
+            return True
+        else:
+            return False
+    else:
+
+        if up:
+            if y > RED_STOP_UP and y - RED_STOP_UP <  RED_LIGHT_THRESHOLD and red:
+                return 2
+            elif overall == 0:
+                return 0
+            else:
+                return 1
+        else:
+            if y < RED_STOP_DOWN and RED_STOP_DOWN - y < RED_LIGHT_THRESHOLD and red:
+                return 2
+            elif overall == 0:
+                return 0
+            else:
+                return 1
+
+
+def get_state(image_data, x, y, up,  red):
+    # return
+    # left : left lane car or not ?
+    # right : right lane car or not
+    # front : 0 or 1 or 2, 0 : nothing , 1: car, 2:red light
+    # terminate
+
+    left = check_state('left', image_data, x, y, up, red)
+    right = check_state('right', image_data,x, y, up, red)
+    front = check_state('front', image_data,x, y, up,  red)
+
+    return State(left, right, front)
+
 
 class ReplayBuffer():
     # the Buffer to store all the frames
@@ -90,56 +140,39 @@ class ReplayBuffer():
         return len(self.memory)
 
 
-class DQN(nn.Module):
-    # the network to train and test the model
+class QModel:
     def __init__(self):
-        super(DQN, self).__init__()
-        self.conv1 = nn.Conv2d(3, 16, kernel_size=5, stride=2)
-        self.pool  = nn.MaxPool2d(2,2)
-        self.conv2 = nn.Conv2d(16,32, kernel_size=5, stride=2)
-        self.bn2 = nn.BatchNorm2d(32)
-        self.conv3 = nn.Conv2d(32, 32, kernel_size=5, stride=2)
-        self.bn3 = nn.BatchNorm2d(32)
-        self.fc1 = nn.Linear(128, 64)
-        self.fc2 = nn.Linear(64, ACTIONS)
+        self.num_state = 12
+        self.q_function = np.random.rand(self.num_state, ACTIONS)
+        self.state_dict = {
+            'left' : {True : 0, False: 6},
+            'right': {True : 0, False: 3 },
+            'front' : {0 : 0, 1:1, 2:2}
+        }
 
-    def forward(self, x):
-        x = F.relu(self.pool(self.conv1(x)))
-        x = F.relu(self.bn2(self.conv2(x)))
-        x = F.relu(self.bn3(self.conv3(x)))
-        x = x.view(-1, 128)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        return x
+    def state_to_int(self, state):
+        return self.state_dict[state.left]+ self.state_dict[state.right] + self.state_dict[state.front]
+
+    def get_q_value(self, state, action):
+        value = self.state_to_int(state)
+        return self.q_function[value][action]
+
+    def get_max_value(self,state):
+        value = self.state_to_int(state)
+        return max(self.q_function[value])
+
+    def get_max_value_action(self, state):
+        value = self.state_to_int(state)
+        action = np.argmax(self.q_function[value])
+        return action
+
+    def set_q_function(self, state, action, q):
+        value = self.state_to_int(state)
+        self.q_function[type][value][action] = q
 
 
-# global variable
-steps_done = 0
-
-model = DQN()
+model = QModel
 memory = ReplayBuffer(10000)
-optimizer = optim.RMSprop(model.parameters())
-
-if USE_CUDA:
-    model.cuda()
-
-
-def get_roi(x, y):
-    # get the region of interests
-    screen = pygame.surfarray.array3d(pygame.display.get_surface())
-    
-    # hard code
-    # need change when cars can go down
-    y_min = max(0 , y - 100)
-    y_max = min(SCREENHEIGHT, y + 120)
-    screen = screen[300:550, y_min:y_max]
-    screen = cv2.resize(screen,(80,80), interpolation = cv2.INTER_AREA)
-    screen = screen.transpose((2, 0, 1))  # transpose into torch order (CHW)
-
-    screen = np.ascontiguousarray(screen, dtype=np.float32) / 255
-    screen = torch.from_numpy(screen)
-    # Resize, and add a batch dimension (BCHW)
-    return resize(screen).unsqueeze(0)
 
 
 def select_action(state):
@@ -152,61 +185,28 @@ def select_action(state):
     if sample > eps_threshold:
         # some times use the model to select actions
         # action with max score
-        state = Variable(state, volatile=True)
-        return model(state).data.max(1)[1].cpu()
+
+        return model.get_max_value_action(state)
         
     else:
         # some time just random action
-        return torch.LongTensor([[random.randrange(ACTIONS)]])
+        return random.randint(0, 4)
 
 
 def optimize_model():
-    # need to sample more
     if len(memory) < BATCH_SIZE:
         return
-    # create batch
+
     transitions = memory.sample(BATCH_SIZE)
-    batch = Transition(*zip(*transitions))
+    state = transitions.state
+    next_state = transitions.next_state
+    reward = transitions.reward
 
-    # Compute a mask of non-final states and concatenate the batch elements
-    non_final_mask = torch.ByteTensor(tuple(map(lambda s: s is not None, batch.next_state)))
+    value = reward
+    if next_state:
+        value += GAMMA * model.get_max_value(next_state)
 
-    if USE_CUDA:
-        non_final_mask = non_final_mask.cuda()
-
-    # We don't want to backprop through the expected action values and volatile
-    # will save us on temporarily changing the model parameters'
-    # requires_grad to False!
-    non_final_next_states = Variable(torch.cat([s for s in batch.next_state if s is not None]), volatile=True)
-
-    state_batch = Variable(torch.cat(batch.state))
-    reward_batch = Variable(torch.cat(batch.reward))
-
-    action_batch = Variable(torch.cat(batch.action))
-
-    # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
-    # columns of actions taken
-    state_action_values = model(state_batch).gather(1, action_batch)
-
-    # Compute V(s_{t+1}) for all next states.
-    next_state_values = Variable(torch.zeros(BATCH_SIZE), volatile=False)
-    next_state_values[non_final_mask] = model(non_final_next_states).max(1)[0]
-    # Now, we don't want to mess up the loss with a volatile flag, so let's
-    # clear it. After this, we'll just end up with a Variable that has
-    # requires_grad=False
-    # next_state_values.volatile = False
-    # Compute the expected Q values
-    expected_state_action_values = (next_state_values * GAMMA) + reward_batch
-
-    # Compute Huber loss
-    loss = F.smooth_l1_loss(state_action_values, expected_state_action_values)
-
-    # Optimize the model
-    optimizer.zero_grad()
-    loss.backward()
-    for param in model.parameters():
-        param.grad.data.clamp_(-1, 1)
-    optimizer.step()
+    model.set_q_function(state, value)
 
 
 def train_model(path='model'):
@@ -214,29 +214,27 @@ def train_model(path='model'):
     s = game.GameState()
     do_nothing = 0
 
-    image_data, reward, terminate, (x, y) , _ = s.frame_step(do_nothing)
+    image_data, reward, terminate, (x, y) , up, red, _ = s.frame_step(do_nothing)
     index = time.time()
     cur_time = time.time()
     while cur_time - index < 1200:
-        last_screen = get_roi(x, y)
-        current_screen = get_roi(x, y)
         
-        state = current_screen - last_screen
+        state = get_state(image_data, x, y, up, red)
+        
         for t in count():
             # Select and perform an action
             action = select_action(state)
 
-            _, reward, done, (x, y), _ = s.frame_step(action[0][0])
+            _, reward, done, (x, y), up, red, _ = s.frame_step(action)
 
-            reward = torch.Tensor([reward])
 
             # Observe new state
-            last_screen = current_screen
-            current_screen = get_roi(x,y)
+            
+            current_state = get_state(image_data, x, y, up, red)
             # print (last_screen.size(), current_screen.size())
 
             if not done:
-                next_state = current_screen - last_screen
+                next_state = current_state
             else:
                 next_state = None
 
@@ -254,57 +252,17 @@ def train_model(path='model'):
 
     	cur_time = time.time()
 
-    with open(path, 'w') as f:
-        torch.save(model.state_dict(), f)
+    # save model
 
 
 def test_simulator(t_max):
-    s = game.GameState()
+
     t = 0
     while t < t_max:
-
-        action = random.randint(0,3)
-        if random.randint(0, 20) == 0:
-            action = 4
-        image_data , reward , terminate , (x, y), _  = s.frame_step(0)
+        image_data , reward , terminate , (x, y), _ , _, _ = s.frame_step(0)
         
         t += 1
 
- 
-def load_model(path):
-
-    trained_model = DQN()
-    trained_model.load_state_dict(torch.load(path))
-
-    if USE_CUDA:
-        trained_model.cuda()
-
-    s = game.GameState()
-    image_data , reward , terminate , (x, y), _ = s.frame_step(0)
-
-    last_screen = get_roi(x,y)
-    start = time.time()
-    total_reward = 0
-    speed = 0
-    frames = 0
-    while not terminate:
-        current_screen = get_roi(x,y)
-        state = current_screen - last_screen
-        
-        # Select and perform an action
-        action = trained_model(Variable(state)).data.max(1)[1].cpu()
-        _, reward, terminate, (x,y) , v = s.frame_step(action[0][0])
-        
-        last_screen = current_screen
-        speed += v
-        frames += 1
-        total_reward += reward
-
-    cur_time = time.time()
-    
-    print('The game last for {} seconds'.format(cur_time-start))
-    print('The game last for {} frames'.format(frames))
-    print('The average speed is {}'.format(speed/frames))
 
 if __name__ == "__main__":
     if sys.argv[1] == 'train':
@@ -312,9 +270,6 @@ if __name__ == "__main__":
             train_model(path=sys.argv[2])
         else:
             train_model()
-            
-    elif sys.argv[1] == 'play':
-        load_model(sys.argv[2])
     elif sys.argv[1] == 'test':
         test_simulator(2000)
     else:
