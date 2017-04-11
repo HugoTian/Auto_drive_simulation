@@ -32,6 +32,7 @@ EPS_DECAY = 200
 # game
 s = game.GameState()
 
+steps_done = 0
 # named tuple to record state transitions
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward', 'terminate'))
@@ -69,7 +70,10 @@ def check_state(target, img, x, y, up, red):
     x1, x2, y_delta = state_table[target][x]
 
     if not x1 :
-        return 1
+        if target in ('left', 'right'):
+            return False
+        else:
+            return 1
     y_up = min(y+y_delta, SCREENHEIGHT)
     y_up = max(0, y_up)
 
@@ -79,7 +83,7 @@ def check_state(target, img, x, y, up, red):
         roi = np.array(img[x1:x2, y_up:y])
 
     overall = roi.sum()
-
+    print(overall)
     #left and  right case
     if target != 'front':
         if overall == 0:
@@ -115,6 +119,9 @@ def get_state(image_data, x, y, up,  red):
     right = check_state('right', image_data,x, y, up, red)
     front = check_state('front', image_data,x, y, up,  red)
 
+    assert left in (True, False)
+    assert right in (True, False)
+    assert front in (0, 1, 2)
     return State(left, right, front)
 
 
@@ -151,7 +158,7 @@ class QModel:
         }
 
     def state_to_int(self, state):
-        return self.state_dict[state.left]+ self.state_dict[state.right] + self.state_dict[state.front]
+        return self.state_dict['left'][state.left]+ self.state_dict['right'][state.right] + self.state_dict['front'][state.front]
 
     def get_q_value(self, state, action):
         value = self.state_to_int(state)
@@ -168,10 +175,10 @@ class QModel:
 
     def set_q_function(self, state, action, q):
         value = self.state_to_int(state)
-        self.q_function[type][value][action] = q
+        self.q_function[value][action] = q
 
 
-model = QModel
+model = QModel()
 memory = ReplayBuffer(10000)
 
 
@@ -193,11 +200,11 @@ def select_action(state):
         return random.randint(0, 4)
 
 
-def optimize_model():
+def optimize_model(action):
     if len(memory) < BATCH_SIZE:
         return
 
-    transitions = memory.sample(BATCH_SIZE)
+    transitions = memory.sample(BATCH_SIZE)[0]
     state = transitions.state
     next_state = transitions.next_state
     reward = transitions.reward
@@ -206,7 +213,7 @@ def optimize_model():
     if next_state:
         value += GAMMA * model.get_max_value(next_state)
 
-    model.set_q_function(state, value)
+    model.set_q_function(state, action, value)
 
 
 def train_model(path='model'):
@@ -217,7 +224,7 @@ def train_model(path='model'):
     image_data, reward, terminate, (x, y) , up, red, _ = s.frame_step(do_nothing)
     index = time.time()
     cur_time = time.time()
-    while cur_time - index < 1200:
+    while cur_time - index < 300:
         
         state = get_state(image_data, x, y, up, red)
         
@@ -245,7 +252,7 @@ def train_model(path='model'):
             state = next_state
 
             # Perform one step of the optimization (on the target network)
-            optimize_model()
+            optimize_model(action)
 
             if done:
                 break
@@ -253,7 +260,7 @@ def train_model(path='model'):
     	cur_time = time.time()
 
     # save model
-
+    print (model.q_function)
 
 def test_simulator(t_max):
 
@@ -266,10 +273,8 @@ def test_simulator(t_max):
 
 if __name__ == "__main__":
     if sys.argv[1] == 'train':
-        if len(sys.argv) > 2:
-            train_model(path=sys.argv[2])
-        else:
-            train_model()
+      
+        train_model()
     elif sys.argv[1] == 'test':
         test_simulator(2000)
     else:

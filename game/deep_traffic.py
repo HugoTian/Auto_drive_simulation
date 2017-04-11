@@ -89,7 +89,7 @@ class GameState:
             self.lane = 2
         else:
             self.playerx = LANE[1]
-            self.lane = 1
+            self.lane = 0
             self.up = False
             self.playery = 0
         # road 
@@ -164,16 +164,10 @@ class GameState:
                 y = SCREENHEIGHT
 
         # avoid collision with other initialization
-        initial_collision = True
-        while initial_collision :
-            if self.car_maps[lane]:
-                initial_collision = any( check_collision(lane, y, lane, car.y, extra=40) for car in self.car_maps[lane])
-                if initial_collision:
-                    if begin: # if its begin state then just abort
-                        return None 
-                    y =  random.randint(0, SCREENHEIGHT)
-            else:
-                initial_collision = False
+       
+        initial_collision = any( check_collision(lane, y, lane, car.y, extra=40) for car in self.car_maps[lane])
+        if initial_collision:
+            return None
 
         speed = random.randint(1,5)
         new_car = Car(i,speed, lane , y,  up)
@@ -197,7 +191,7 @@ class GameState:
         self.env.set_lane_info(self.car_maps)
 
         # update env in white car
-        for i in range(self.max_white_car):
+        for i in self.white_cars:
             self.white_cars[i].update_env(self.env)
 
     def update_player(self, actions):
@@ -493,9 +487,13 @@ class GameState:
         # get entire new screen
         if self.circle:
             if random.randint(0, 1) == 0:
+                self.lane = 2
+                self.playerx = LANE[2]
                 self.up = True
                 self.playery = SCREENHEIGHT - RED_CAR_HEIGHT
             else:
+                self.lane = 1
+                self.playerx = LANE[1]
                 self.up = False
                 self.playery = 0
 
@@ -512,7 +510,7 @@ class GameState:
             reward = -1
             self.__init__()
         else:
-            reward = self.calculate_passed_car() * 10 + self.playerVelY
+            reward = 1 #self.calculate_passed_car() * 10 + self.playerVelY
         # draw 
         SCREEN.blit(IMAGES['background'], (0,0))
 
