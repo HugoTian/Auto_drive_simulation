@@ -133,9 +133,9 @@ def get_roi(x, y, up):
     y_min = max(0 , y - 120)
     y_max = min(SCREENHEIGHT, y + 120)
     if up:
-        screen = screen[300:550, y_min:y_max]
+        screen = screen[50:550, y_min:y_max]
     else:
-        screen = screen[50:300, y_min:y_max]
+        screen = screen[50:550, y_min:y_max]
     screen = cv2.resize(screen,(80,80), interpolation = cv2.INTER_AREA)
     screen = screen.transpose((2, 0, 1))  # transpose into torch order (CHW)
 
@@ -283,20 +283,21 @@ def load_model(path):
         trained_model.cuda()
 
     s = game.GameState()
-    image_data , reward , terminate , (x, y), _ , _, _, _ = s.frame_step(0)
+    image_data , reward , terminate , (x, y), up , _, _, _ = s.frame_step(0)
 
-    last_screen = get_roi(x,y)
+    last_screen = get_roi(x,y, up)
     start = time.time()
     total_reward = 0
     speed = 0
     frames = 0
+    rewards = 0
     while not terminate:
-        current_screen = get_roi(x,y)
+        current_screen = get_roi(x,y, up)
         state = current_screen - last_screen
         
         # Select and perform an action
         action = trained_model(Variable(state)).data.max(1)[1].cpu()
-        _, reward, terminate, (x,y) , _ , v, _, _ = s.frame_step(action[0][0])
+        _, reward, terminate, (x,y) , up , v, _, _ = s.frame_step(action[0][0])
         
         last_screen = current_screen
         speed += v
@@ -308,7 +309,7 @@ def load_model(path):
     print('The game last for {} seconds'.format(cur_time-start))
     print('The game last for {} frames'.format(frames))
     print('The average speed is {}'.format(speed/frames))
-
+    print('The total reward is {}'.format(total_reward))
 if __name__ == "__main__":
     if sys.argv[1] == 'train':
         if len(sys.argv) > 2:

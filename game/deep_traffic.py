@@ -83,7 +83,7 @@ class GameState:
         self.playerMaxV = 6
         if random.randint(0, 1) == 0:
             self.up = True
-            self.playery = SCREENHEIGHT - RED_CAR_HEIGHT
+            self.playery = random.randint(400, SCREENHEIGHT - RED_CAR_HEIGHT)
             self.playerx = LANE[2]
 
             self.lane = 2
@@ -91,7 +91,7 @@ class GameState:
             self.playerx = LANE[1]
             self.lane = 0
             self.up = False
-            self.playery = 0
+            self.playery = random.randint(0,400)
         # road 
         self.basex = BASE_SHIFT 
         
