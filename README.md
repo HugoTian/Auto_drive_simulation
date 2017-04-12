@@ -30,9 +30,9 @@ The simulator is in game/, to build a simulator:
 To interact with the simulator:
 
     do_nothing = 0
-    image, reward, terminate, (x,y) = s.frame_step(do_nothing)
+    image, reward, terminate, (x,y), up, red , speed, pedes = s.frame_step(do_nothing)
 
-Where image is the current screen of simulator, reward is current reward, terminate indicate whether game is over, (x, y) is the location of player. The input argument is the action, which is 0 in above example, indicating do nothing. The other actions are:
+Where image is the current screen of simulator, reward is current reward, terminate indicate whether game is over, (x, y) is the location of player, red means whether the corresponding traffic light is red, speed is the current speed of agent, and pedes is the location of pedestrian. The input argument is the action, which is 0 in above example, indicating do nothing. The other actions are:
 
     1 : left shfit lane
     2 : right shift lane
