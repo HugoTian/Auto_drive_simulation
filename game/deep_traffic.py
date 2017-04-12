@@ -329,6 +329,10 @@ class GameState:
         if self.walk_pedes.left:
             # left walk pedestrian
             new_x  = self.walk_pedes.x - self.walk_pedes.speed
+            # try to avoid collion with player
+            if abs(new_x - self.playerx) < 60 and abs(self.walk_pedes.y - self.playery) < 60:
+                new_x = self.walk_pedes.x
+
             if new_x < PEDES_LEFT:
                 self.walk_pedes = None
                 self.init_pedes()
@@ -337,7 +341,8 @@ class GameState:
 
         else:# right walk pedestrian
             new_x_2 = self.walk_pedes.x + self.walk_pedes.speed
-
+            if abs(new_x_2 - self.playerx) < 60 and abs(self.walk_pedes.y - self.playery) < 60:
+                new_x_2 = self.walk_pedes.x
             if new_x_2 > PEDES_RIGHT:
                 self.walk_pedes = None
                 self.init_pedes()
@@ -560,9 +565,9 @@ class GameState:
         FPSCLOCK.tick(FPS)
 
         if self.up:
-            return image_data, reward, terminal, (self.playerx, self.playery), self.up, self.light_up.red , self.playerVelY
+            return image_data, reward, terminal, (self.playerx, self.playery), self.up, self.light_up.red , self.playerVelY, self.walk_pedes
         else:
-            return image_data, reward, terminal, (self.playerx, self.playery), self.up, self.light_down.red, self.playerVelY
+            return image_data, reward, terminal, (self.playerx, self.playery), self.up, self.light_down.red, self.playerVelY, self.walk_pedes
 
 def showScore(score):
     """displays score in screen"""

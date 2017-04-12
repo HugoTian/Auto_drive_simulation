@@ -134,10 +134,10 @@ class WhiteCar:
                     hit = True
         else:
             if people.left:
-                if x1 < PEDES_RIGHT and x1 > PEDES_LEFT and self.y < y1 and y1 - self.y < 70:
+                if x1 < PEDES_RIGHT and x1 > PEDES_LEFT and self.y < y1 and y1 - self.y < 75:
                     hit = True
             else:
-                if x1 < PEDES_MID and x1 > PEDES_LEFT and self.y < y1 and y1 - self.y < 70:
+                if x1 < PEDES_MID and x1 > PEDES_LEFT and self.y < y1 and y1 - self.y < 75:
                     hit = True
 
         return hit
@@ -224,25 +224,25 @@ class WhiteCar:
 
         # stop
         if red:
-            if self.up and self.y >= self.up_dict[self.up]['stop'] and self.y - self.up_dict[self.up]['stop'] < RED_LIGHT_THRESHOLD:
-                self.y = self.up_dict[self.up]['stop'] + 1
-                self.speed = 0
-                self.wait_for_light = True
-            else:
-                self.wait_for_light = False
+            if self.up :
+                if self.y >= self.up_dict[self.up]['stop'] and self.y - self.up_dict[self.up]['stop'] < RED_LIGHT_THRESHOLD:
+                    self.y = self.up_dict[self.up]['stop'] + 1
+                    self.speed = 0
+                    self.wait_for_light = True
+                else:
+                    self.wait_for_light = False
 
-            if not self.up and self.y <= self.up_dict[self.up]['stop'] and self.up_dict[self.up]['stop'] - self.y < RED_LIGHT_THRESHOLD:
-                self.y = self.up_dict[self.up]['stop'] - 1
-                self.speed = 0
-                self.wait_for_light = True
             else:
-                self.wait_for_light = False
+                if not self.up and self.y <= self.up_dict[self.up]['stop'] and self.up_dict[self.up]['stop'] - self.y < RED_LIGHT_THRESHOLD:
+                    self.y = self.up_dict[self.up]['stop'] - 1
+                    self.speed = 0
+                    self.wait_for_light = True
+                else:
+                    self.wait_for_light = False
         else:
             self.wait_for_light = False
 
-        # if not stop
-        if not self.park and not red and self.speed == 0:
-            self.try_speed_up()
+        
 
 
     def getXY(self):
