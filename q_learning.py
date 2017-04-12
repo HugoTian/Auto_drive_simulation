@@ -266,7 +266,7 @@ def train_model(path='model'):
     image_data, reward, terminate, (x, y) , up, red, _, pedes = s.frame_step(do_nothing)
     index = time.time()
     cur_time = time.time()
-    while cur_time - index < 30:
+    while cur_time - index < 300:
         
         state = get_state(image_data, x, y, up, red, pedes)
         

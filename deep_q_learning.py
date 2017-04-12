@@ -124,15 +124,18 @@ if USE_CUDA:
     model.cuda()
 
 
-def get_roi(x, y):
+def get_roi(x, y, up):
     # get the region of interests
     screen = pygame.surfarray.array3d(pygame.display.get_surface())
     
     # hard code
     # need change when cars can go down
-    y_min = max(0 , y - 100)
+    y_min = max(0 , y - 120)
     y_max = min(SCREENHEIGHT, y + 120)
-    screen = screen[300:550, y_min:y_max]
+    if up:
+        screen = screen[300:550, y_min:y_max]
+    else:
+        screen = screen[50:300, y_min:y_max]
     screen = cv2.resize(screen,(80,80), interpolation = cv2.INTER_AREA)
     screen = screen.transpose((2, 0, 1))  # transpose into torch order (CHW)
 
@@ -214,25 +217,25 @@ def train_model(path='model'):
     s = game.GameState()
     do_nothing = 0
 
-    image_data, reward, terminate, (x, y), _ , _, _= s.frame_step(do_nothing)
+    image_data, reward, terminate, (x, y), up , _, _, _= s.frame_step(do_nothing)
     index = time.time()
     cur_time = time.time()
     while cur_time - index < 1200:
-        last_screen = get_roi(x, y)
-        current_screen = get_roi(x, y)
+        last_screen = get_roi(x, y, up)
+        current_screen = get_roi(x, y, up)
         
         state = current_screen - last_screen
         for t in count():
             # Select and perform an action
             action = select_action(state)
 
-            _, reward, done, (x, y), _ , _ , _ = s.frame_step(action[0][0])
+            _, reward, done, (x, y), up , _ , _ , _= s.frame_step(action[0][0])
 
             reward = torch.Tensor([reward])
 
             # Observe new state
             last_screen = current_screen
-            current_screen = get_roi(x,y)
+            current_screen = get_roi(x,y, up)
             # print (last_screen.size(), current_screen.size())
 
             if not done:
@@ -266,7 +269,7 @@ def test_simulator(t_max):
         action = random.randint(0,3)
         if random.randint(0, 20) == 0:
             action = 4
-        image_data , reward , terminate , (x, y), _ , _, _ = s.frame_step(0)
+        image_data , reward , terminate , (x, y), _ , _, _ , _= s.frame_step(0)
         
         t += 1
 
@@ -280,7 +283,7 @@ def load_model(path):
         trained_model.cuda()
 
     s = game.GameState()
-    image_data , reward , terminate , (x, y), _ , _, _ = s.frame_step(0)
+    image_data , reward , terminate , (x, y), _ , _, _, _ = s.frame_step(0)
 
     last_screen = get_roi(x,y)
     start = time.time()
@@ -293,7 +296,7 @@ def load_model(path):
         
         # Select and perform an action
         action = trained_model(Variable(state)).data.max(1)[1].cpu()
-        _, reward, terminate, (x,y) , v = s.frame_step(action[0][0])
+        _, reward, terminate, (x,y) , _ , v, _, _ = s.frame_step(action[0][0])
         
         last_screen = current_screen
         speed += v
