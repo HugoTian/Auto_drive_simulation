@@ -499,11 +499,15 @@ class GameState:
                 self.playerx = LANE[2]
                 self.up = True
                 self.playery = SCREENHEIGHT - RED_CAR_HEIGHT
+                self.playerVelY = 0
+                self.walk_pedes = None
             else:
                 self.lane = 1
                 self.playerx = LANE[1]
                 self.up = False
                 self.playery = 0
+                self.playerVelY = 0
+                self.walk_pedes = None
 
             self.circle = False
             self.init_white_car()
