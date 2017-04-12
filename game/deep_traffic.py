@@ -29,14 +29,14 @@ reward_scheme = {
                   1: Reward(-1, True, 2, LANE[2], 0, True), # left
                   2: Reward(0.5, False, 3, LANE[3], 0, True), # right
                   3: Reward(0.5, False, 2, LANE[2], 1, True), # speed up
-                  4: Reward(0.5, False, 2, LANE[2], -3, True) # slow down
+                  4: Reward(0.5, False, 2, LANE[2], -10, True) # slow down
                 }, 
            3 : { # lane 3
                   0: Reward(0.5, False, 3, LANE[3], 0, True),  # do nothing
                   1: Reward(0.5, False, 2, LANE[2], 0, True), # left
                   2: Reward(-1, True, 3, LANE[3], 0, True), # right
                   3: Reward(0.5, False, 3, LANE[3], 1, True), # speed up
-                  4: Reward(0.5, False, 3, LANE[3], -3, True) # slow down
+                  4: Reward(0.5, False, 3, LANE[3], -10, True) # slow down
                 }
            }
     ,False:{
@@ -45,14 +45,14 @@ reward_scheme = {
                   1: Reward(0.5, False, 1, LANE[1], 0, False), # left
                   2: Reward(-1, True, 0, LANE[0], 0, False), # right
                   3: Reward(0.5, False, 0, LANE[0], 1, False), # speed up
-                  4: Reward(0.5, False, 0, LANE[0], -3, False) # slow down
+                  4: Reward(0.5, False, 0, LANE[0], -10, False) # slow down
                 }, 
             1:  {# lane 1
                   0: Reward(0.5, False, 1, LANE[1], 0, False), # do nothing
                   1: Reward(-1, True, 1, LANE[1], 0, False), # left
                   2: Reward(0.5, False, 0, LANE[0], 0, False), # right
                   3: Reward(0.5, False, 1, LANE[1], 1, False), # speed up
-                  4: Reward(0.5, False, 1, LANE[1], -3, False) # slow down
+                  4: Reward(0.5, False, 1, LANE[1], -10, False) # slow down
                 }
             }
 }
@@ -107,7 +107,7 @@ class GameState:
         self.yellow_starts2 = 0
 
         # white car
-        self.max_white_car = 7
+        self.max_white_car = 5
         self.white_cars = {} # key is idx, and value is white car object
 
         # initialize white car and environment
@@ -216,6 +216,9 @@ class GameState:
         # summary
 
         self.playerVelY += self.playerAccY
+
+        if self.playerAccY == -10:
+            self.playerVelY = 0
 
         if self.playerVelY < 0:
             self.playerVelY = 0
@@ -521,9 +524,7 @@ class GameState:
 
         SCREEN.blit(IMAGES['road'], (self.basex, 0))
 
-        # stop line
-        SCREEN.blit(IMAGES['white_line'], (142,RED_STOP_DOWN+60))
-        SCREEN.blit(IMAGES['white_line'], (310, RED_STOP_UP))
+
 
         # red car
         if self.up:

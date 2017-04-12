@@ -79,36 +79,56 @@ def generate_random_action():
     return random.randint(1,4)
 
 
-def check_state(target, img, x, y, red):
+def check_state(target, img, x, y, up, red):
     #check state
 
     x1, x2, y_delta = state_table[target][x]
 
     if not x1 :
         return 1
-    y_up = min(y+y_delta, SCREENHEIGHT)
     y_up = max(0, y+y_delta)
+    y_down = min(800, y+y_delta)
 
-    if y_up>y:
-        roi = np.array(img[x1:x2, y-20:y_up+20])
-    else:
-        roi = np.array(img[x1:x2, y_up:y])
-    overall = roi.sum()
-
-    #left and  right case
-    if target != 'front':
-        if overall == 0:
-            return 0
+    if up:
+        if y_up>y:
+            roi = np.array(img[x1:x2, y-20:y_up+20])
         else:
-            return 1
-    else:
+            roi = np.array(img[x1:x2, y_up:y])
+        overall = roi.sum()
 
-        if y > RED_STOP_UP and y - RED_STOP_UP < 15 and red:
-            return 2
-        elif overall == 0:
-            return 0
+        #left and  right case
+        if target != 'front':
+            if overall == 0:
+                return 0
+            else:
+                return 1
         else:
-            return 1
+            if y > RED_STOP_UP and y - 20 < RED_STOP_UP and red:
+                return 2
+            elif overall == 0:
+                return 0
+            else:
+                return 1
+    else:
+        if y_delta != 120:
+            roi = np.array(img[x1:x2, y-20:y_down+20])
+        else:
+            roi = np.array(img[x1:x2, y + 60:y_down])
+        overall = roi.sum()
+
+        #left and  right case
+        if target != 'front':
+            if overall == 0:
+                return 0
+            else:
+                return 1
+        else:
+            if y + 60 < RED_STOP_DOWN and y + 80 > RED_STOP_DOWN and red:
+                return 2
+            elif overall == 0:
+                return 0
+            else:
+                return 1
 
 
 def env_update(action):
@@ -118,10 +138,10 @@ def env_update(action):
     # front : 0 or 1 or 2, 0 : nothing , 1: car, 2:red light
     # terminate
 
-    image_data , reward , terminate , (x, y), red = s.frame_step(action)
-    left = check_state('left', image_data, x, y, red)
-    right = check_state('right', image_data,x, y, red)
-    front = check_state('front', image_data,x, y, red)
+    image_data , reward , terminate , (x, y), up, red, _, _ = s.frame_step(action)
+    left = check_state('left', image_data, x, y, up, red)
+    right = check_state('right', image_data,x, y, up, red)
+    front = check_state('front', image_data,x, y, up, red)
 
     if terminate:
         terminate = 1
@@ -168,7 +188,7 @@ def test_simulator(t_max):
             left, front, right, terminate = env_update(4)
             current_state = state(left, front, right, terminate)
 
-        print(front)
+        print(q)
 
         t += 1
 
