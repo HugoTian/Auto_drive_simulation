@@ -29,14 +29,14 @@ reward_scheme = {
                   1: Reward(-1, True, 2, LANE[2], 0, True), # left
                   2: Reward(0.5, False, 3, LANE[3], 0, True), # right
                   3: Reward(0.5, False, 2, LANE[2], 1, True), # speed up
-                  4: Reward(0.5, False, 2, LANE[2], -3, True) # slow down
+                  4: Reward(0.5, False, 2, LANE[2], -6, True) # slow down
                 }, 
            3 : { # lane 3
                   0: Reward(0.5, False, 3, LANE[3], 0, True),  # do nothing
                   1: Reward(0.5, False, 2, LANE[2], 0, True), # left
                   2: Reward(-1, True, 3, LANE[3], 0, True), # right
                   3: Reward(0.5, False, 3, LANE[3], 1, True), # speed up
-                  4: Reward(0.5, False, 3, LANE[3], -3, True) # slow down
+                  4: Reward(0.5, False, 3, LANE[3], -6, True) # slow down
                 }
            }
     ,False:{
@@ -45,14 +45,14 @@ reward_scheme = {
                   1: Reward(0.5, False, 1, LANE[1], 0, False), # left
                   2: Reward(-1, True, 0, LANE[0], 0, False), # right
                   3: Reward(0.5, False, 0, LANE[0], 1, False), # speed up
-                  4: Reward(0.5, False, 0, LANE[0], -3, False) # slow down
+                  4: Reward(0.5, False, 0, LANE[0], -6, False) # slow down
                 }, 
             1:  {# lane 1
                   0: Reward(0.5, False, 1, LANE[1], 0, False), # do nothing
                   1: Reward(-1, True, 1, LANE[1], 0, False), # left
                   2: Reward(0.5, False, 0, LANE[0], 0, False), # right
                   3: Reward(0.5, False, 1, LANE[1], 1, False), # speed up
-                  4: Reward(0.5, False, 1, LANE[1], -3, False) # slow down
+                  4: Reward(0.5, False, 1, LANE[1], -6, False) # slow down
                 }
             }
 }
@@ -107,7 +107,7 @@ class GameState:
         self.yellow_starts2 = 0
 
         # white car
-        self.max_white_car = 7
+        self.max_white_car = 6
         self.white_cars = {} # key is idx, and value is white car object
 
         # initialize white car and environment
@@ -516,9 +516,10 @@ class GameState:
         if terminal:
             # make sure reward is -1
             reward = -1
+            print('Game Over')
             self.__init__()
         else:
-            reward = 1 #self.calculate_passed_car() * 10 + self.playerVelY
+            reward = self.calculate_passed_car() * 10 + self.playerVelY
         # draw 
         SCREEN.blit(IMAGES['background'], (0,0))
 

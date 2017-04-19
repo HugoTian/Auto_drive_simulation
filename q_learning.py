@@ -6,7 +6,7 @@ import math
 import game.deep_traffic as game
 
 from itertools import count
-from game.utils import  *
+from game.utils import *
 
 import numpy as np
 import time
@@ -37,7 +37,7 @@ GAMMA = 0.999
 ROI_WIDTH = 200
 ROI_HEIGHT = 100
 
-
+UP_THRESHOLD = 50000
 # learning parameter
 EPS_START = 0.9
 EPS_END = 0.02
@@ -70,10 +70,10 @@ state_table = {
         400: (None, None, None)
     },
     'front': {
-        150: (150, 190, 120),
-        240: (240, 280, 120),
-        330: (330, 370, -120),
-        400: (400, 440, -120)
+        150: (150, 190, 70),
+        240: (240, 280, 70),
+        330: (330, 370, -70),
+        400: (400, 440, -70)
     }
 
 }
@@ -102,14 +102,14 @@ def check_state(target, img, x, y, up, red, pedes):
         if up:
             if y > RED_STOP_UP and y - RED_STOP_UP <  RED_LIGHT_THRESHOLD and red:
                 return 2
-            elif overall == 0:
+            elif overall < UP_THRESHOLD:
                 return 0
             else:
                 return 1
         else:
             if y < RED_STOP_DOWN and RED_STOP_DOWN - y < RED_LIGHT_THRESHOLD and red:
                 return 2
-            elif overall == 0:
+            elif overall < UP_THRESHOLD:
                 return 0
             else:
                 return 1
@@ -140,7 +140,7 @@ def check_state(target, img, x, y, up, red, pedes):
                 return 1
             elif not up and not l_p and x > x_p and x - x_p < 40 and y_p > y and y_p - y < 60:
                 return 1
-            elif overall ==0:
+            elif overall == 0:
                 return 0
             else:
                 return 2 
@@ -198,6 +198,24 @@ class QModel:
             'right': {0 : 0, 1:3, 2:6 },
             'front' : {0 : 0, 1:1, 2:2}
         }
+        # hack initialize
+
+        for i in range(self.num_state):
+            left = i / 9
+            right = (i / 3) % 3
+            front = i % 3
+
+            if front == 0:
+                self.q_function[i][3] = 100
+            elif front == 2:
+                self.q_function[i][4] = 100
+            else:
+                if left == 0:
+                    self.q_function[i][1] = 100
+                elif right == 0:
+                    self.q_function[i][2] = 100
+                else:
+                    self.q_function[i][4] = 100
 
     def state_to_int(self, state):
         return self.state_dict['left'][state.left]+ self.state_dict['right'][state.right] + self.state_dict['front'][state.front]
@@ -231,15 +249,9 @@ def select_action(state):
     eps_threshold = EPS_END + (EPS_START - EPS_END) * math.exp(-1. * steps_done / EPS_DECAY)
     steps_done += 1
 
-    if sample > eps_threshold:
-        # some times use the model to select actions
-        # action with max score
+    # action with max score
+    return model.get_max_value_action(state)
 
-        return model.get_max_value_action(state)
-        
-    else:
-        # some time just random action
-        return random.randint(0, 4)
 
 
 def optimize_model(action):
@@ -310,7 +322,14 @@ def train_model(path='model'):
     test_game()
 
 
-def test_game():
+def test_game(path=False):
+
+    if not path:
+        policy = final_policy
+    else:
+        policy = QModel()
+        from numpy import genfromtxt
+        policy.q_function = genfromtxt('model.csv', delimiter=',')
     new_s = game.GameState()
     start = time.time()
     reward = 0
@@ -322,7 +341,7 @@ def test_game():
 
         state = get_state(image_data, x, y, up, red, pedes)
         
-        action = final_policy.get_max_value_action(state)
+        action = policy.get_max_value_action(state)
 
         image_data, r, terminate, (x, y) , up, red, sp, pedes = new_s.frame_step(action)
 
@@ -338,6 +357,9 @@ def test_game():
     print('The game last for {} second'.format(cur-start))
     print('The total award : {}'.format(reward))
     print('The average speed is : {}'.format(speed/t))
+    if not path:
+        np.savetxt("model.csv", final_policy.q_function , delimiter=",")
+
 
 def test_simulator(t_max):
 
@@ -354,5 +376,7 @@ if __name__ == "__main__":
         train_model()
     elif sys.argv[1] == 'test':
         test_simulator(2000)
+    elif sys.argv[1] == 'play':
+        test_game(path=True)
     else:
         sys.exit("Wrong command")
