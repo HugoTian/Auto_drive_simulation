@@ -334,6 +334,7 @@ def test_game():
 
     cur = time.time()
 
+    print('The game last for {} frames'.format(t))
     print('The game last for {} second'.format(cur-start))
     print('The total award : {}'.format(reward))
     print('The average speed is : {}'.format(speed/t))
