@@ -58,7 +58,7 @@ final_policy = None
 state_table = {
 
     'left': {
-        150: (240, 280, 120),
+        150: (240, 280, 60),
         240: (None, None, None),
         330: (None, None, None),
         400: (330, 370, 60)
@@ -86,16 +86,29 @@ def check_state(target, img, x, y, up, red, pedes):
 
     if not x1 :
         return 2
+    if up:
+        if target == 'front':
+            y_up = min(y+y_delta, SCREENHEIGHT)
+            y_up = max(0, y_up)
+        else:
+            y_up = min(y+y_delta, SCREENHEIGHT)
+            y_up = max(0, y_up)
 
-    y_up = min(y+y_delta, SCREENHEIGHT)
-    y_up = max(0, y_up)
+    else:
+        if target == 'front':
+            y_up = min(y+y_delta+60, SCREENHEIGHT)
+            y_up = max(0, y_up)
+        else:
+            y_up = min(y+y_delta, SCREENHEIGHT)
+            y_up = max(0, y_up)
 
-    if y_up>y:
+    if y < y_up:
         roi = np.array(img[x1:x2, y:y_up])
     else:
         roi = np.array(img[x1:x2, y_up:y])
 
     overall = roi.sum()
+    print(target, overall, y, y_up)
     # front case
     if target == 'front':
         
@@ -164,6 +177,7 @@ def get_state(image_data, x, y, up,  red, pedes):
     assert left in (0,1,2)
     assert right in (0,1,2)
     assert front in (0, 1, 2)
+    print(left, right, front)
     return State(left, right, front)
 
 
@@ -306,7 +320,7 @@ def train_model(path='model'):
             state = next_state
 
             # Perform one step of the optimization (on the target network)
-            optimize_model(action)
+            #optimize_model(action)
 
             if done:
                 break

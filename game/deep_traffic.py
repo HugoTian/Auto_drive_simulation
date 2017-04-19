@@ -519,15 +519,15 @@ class GameState:
             print('Game Over')
             self.__init__()
         else:
-            reward = self.calculate_passed_car() * 10 + self.playerVelY
+            reward = self.playerVelY
         # draw 
         SCREEN.blit(IMAGES['background'], (0,0))
 
         SCREEN.blit(IMAGES['road'], (self.basex, 0))
 
         # stop line
-        SCREEN.blit(IMAGES['white_line'], (142,RED_STOP_DOWN+60))
-        SCREEN.blit(IMAGES['white_line'], (310, RED_STOP_UP))
+        #SCREEN.blit(IMAGES['white_line'], (142,RED_STOP_DOWN+60))
+        #SCREEN.blit(IMAGES['white_line'], (310, RED_STOP_UP))
 
         # red car
         if self.up:
