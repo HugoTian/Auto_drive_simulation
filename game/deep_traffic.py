@@ -526,8 +526,8 @@ class GameState:
         SCREEN.blit(IMAGES['road'], (self.basex, 0))
 
         # stop line
-        #SCREEN.blit(IMAGES['white_line'], (142,RED_STOP_DOWN+60))
-        #SCREEN.blit(IMAGES['white_line'], (310, RED_STOP_UP))
+        SCREEN.blit(IMAGES['white_line'], (142,RED_STOP_DOWN+60))
+        SCREEN.blit(IMAGES['white_line'], (310, RED_STOP_UP))
 
         # red car
         if self.up:

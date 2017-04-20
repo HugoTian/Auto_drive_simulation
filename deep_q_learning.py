@@ -279,6 +279,9 @@ def load_model(path):
     trained_model = DQN()
     trained_model.load_state_dict(torch.load(path))
 
+    with open('model_cpu', 'w') as f:
+        torch.save(trained_model.cpu().state_dict(), f)
+    
     if USE_CUDA:
         trained_model.cuda()
 
@@ -310,6 +313,7 @@ def load_model(path):
     print('The game last for {} frames'.format(frames))
     print('The average speed is {}'.format(speed/frames))
     print('The total reward is {}'.format(total_reward))
+
 if __name__ == "__main__":
     if sys.argv[1] == 'train':
         if len(sys.argv) > 2:
