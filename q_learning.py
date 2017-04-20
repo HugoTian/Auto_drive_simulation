@@ -87,10 +87,6 @@ def check_state(target, img, x, y, up, red, pedes):
     if not x1 :
         return 2
     if up:
-        if target == 'front':
-            y_up = min(y+y_delta, SCREENHEIGHT)
-            y_up = max(0, y_up)
-        else:
             y_up = min(y+y_delta, SCREENHEIGHT)
             y_up = max(0, y_up)
 
@@ -98,6 +94,9 @@ def check_state(target, img, x, y, up, red, pedes):
         if target == 'front':
             y_up = min(y+y_delta+60, SCREENHEIGHT)
             y_up = max(0, y_up)
+            y = y + 60
+            y = min(y, SCREENHEIGHT)
+            y = max(0, y)
         else:
             y_up = min(y+y_delta, SCREENHEIGHT)
             y_up = max(0, y_up)
@@ -108,19 +107,19 @@ def check_state(target, img, x, y, up, red, pedes):
         roi = np.array(img[x1:x2, y_up:y])
 
     overall = roi.sum()
-    print(target, overall, y, y_up)
+    #print(target, overall, y, y_up, x1, x2)
     # front case
     if target == 'front':
         
         if up:
-            if y > RED_STOP_UP and y - RED_STOP_UP <  RED_LIGHT_THRESHOLD and red:
+            if y > RED_STOP_UP and y - RED_STOP_UP <  10 and red:
                 return 2
             elif overall < UP_THRESHOLD:
                 return 0
             else:
                 return 1
         else:
-            if y < RED_STOP_DOWN and RED_STOP_DOWN - y < RED_LIGHT_THRESHOLD and red:
+            if y < RED_STOP_DOWN and RED_STOP_DOWN - y < 10 and red:
                 return 2
             elif overall < UP_THRESHOLD:
                 return 0
@@ -163,6 +162,7 @@ def check_state(target, img, x, y, up, red, pedes):
             else:
                 return 2
 
+
 def get_state(image_data, x, y, up,  red, pedes):
     # return
     # left : left lane car or not ?
@@ -177,7 +177,7 @@ def get_state(image_data, x, y, up,  red, pedes):
     assert left in (0,1,2)
     assert right in (0,1,2)
     assert front in (0, 1, 2)
-    print(left, right, front)
+    #print(left, right, front)
     return State(left, right, front)
 
 
@@ -264,7 +264,10 @@ def select_action(state):
     steps_done += 1
 
     # action with max score
-    return model.get_max_value_action(state)
+    if sample > eps_threshold:
+        return model.get_max_value_action(state)
+    else:
+        return random.randint(0, 4)
 
 
 
@@ -292,7 +295,7 @@ def train_model(path='model'):
     image_data, reward, terminate, (x, y) , up, red, _, pedes = s.frame_step(do_nothing)
     index = time.time()
     cur_time = time.time()
-    while cur_time - index < 300:
+    while cur_time - index < 180:
         
         state = get_state(image_data, x, y, up, red, pedes)
         
@@ -300,7 +303,7 @@ def train_model(path='model'):
             # Select and perform an action
             action = select_action(state)
 
-            _, reward, done, (x, y), up, red, _ , pedes= s.frame_step(action)
+            image_data, reward, done, (x, y), up, red, _ , pedes= s.frame_step(action)
 
 
             # Observe new state
@@ -320,7 +323,7 @@ def train_model(path='model'):
             state = next_state
 
             # Perform one step of the optimization (on the target network)
-            #optimize_model(action)
+            optimize_model(action)
 
             if done:
                 break
